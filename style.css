@@ -1273,3 +1273,24 @@ kbd {
 
 .ring .val b.full { font-size: 27px; letter-spacing: -.5px; }
 @media (max-width: 720px) { .ring .val b.full { font-size: 21px; } }
+
+.ichip.ticket { background: color-mix(in srgb, var(--j-gray) 12%, transparent); border-color: color-mix(in srgb, var(--j-gray) 40%, transparent); }
+.ichip.ticket svg { color: var(--j-gray); }
+
+/* ---------- Peso do carro e etiquetas copiáveis ---------- */
+.peso-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.peso-preview {
+  display: inline-flex; align-items: center; gap: 7px; padding: 9px 12px; border-radius: 11px;
+  border: 1px solid var(--line-2); background: var(--gold-soft); color: var(--gold);
+  font-variant-numeric: tabular-nums; transition: .15s;
+}
+.peso-preview b { font-family: var(--serif); font-size: 20px; color: var(--text); font-weight: 700; }
+.peso-preview small { font-size: 12px; color: var(--muted); font-weight: 600; }
+.peso-preview svg { width: 16px; height: 16px; }
+.peso-preview:hover { border-color: var(--gold); }
+.ichip.copyable { cursor: copy; transition: transform .12s, border-color .15s; user-select: none; }
+.ichip.copyable:hover { border-color: var(--gold); }
+.ichip.copyable:active { transform: scale(.95); }
+.ichip.peso { background: var(--gold-soft); border-color: var(--line-2); }
+.ichip.rep-lote { opacity: .9; }
+@media (max-width: 720px) { .peso-row { grid-template-columns: 1fr; } .peso-preview { justify-content: center; } }

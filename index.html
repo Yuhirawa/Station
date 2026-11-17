@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=8">
   <script>
     // aplica tema e preferências antes de desenhar (evita "piscar")
     (function () {
@@ -286,6 +286,14 @@
             <option value="8">8 h</option>
           </select>
         </label>
+        <label class="span-2 peso-field">Peso do carro (toneladas)
+          <span class="peso-row">
+            <input name="pesoT" type="text" inputmode="decimal" maxlength="12" placeholder="Ex.: 22">
+            <button type="button" class="peso-preview" id="pesoPreview" data-copy="" title="Toque para copiar" hidden>
+              <span data-ic="weight"></span><b id="pesoVal"></b><small>kg</small><span data-ic="copy"></span>
+            </button>
+          </span>
+        </label>
         <div class="span-2 field rep-field">
           <div class="rep-head">
             <span class="fl"><span data-ic="recycle"></span>Reprocessos</span>
@@ -294,11 +302,14 @@
           <div class="rep-list" id="repList"></div>
           <button type="button" class="rep-add" data-rep-add><span data-ic="plus"></span>Adicionar reprocesso</button>
         </div>
-        <label>Ordem de serviço
-          <input name="os" maxlength="40" placeholder="Nº da OS">
+        <label>Ordem de processo
+          <input name="os" maxlength="40" placeholder="Nº da ordem">
         </label>
-        <label>OP / lote
-          <input name="op" maxlength="40">
+        <label>Lote
+          <input name="op" maxlength="40" placeholder="Nº do lote">
+        </label>
+        <label class="span-2">Ticket
+          <input name="ticket" maxlength="40" placeholder="Nº do ticket da Revolog">
         </label>
         <label class="span-2">Observações
           <textarea name="obs" rows="2" maxlength="300" placeholder="Ocorrências, justificativas para a Revolog…"></textarea>
@@ -442,6 +453,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

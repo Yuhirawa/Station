@@ -1,7 +1,7 @@
 // Service worker: funciona offline e sempre busca a versão mais nova quando há internet.
 // Ao publicar uma versão nova, troque o número abaixo e o ?v= no index.html.
-const CACHE = 'filling-v6';
-const ASSETS = ['./', './index.html', './style.css?v=6', './app.js?v=6', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png'];
+const CACHE = 'filling-v8';
+const ASSETS = ['./', './index.html', './style.css?v=8', './app.js?v=8', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));

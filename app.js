@@ -57,6 +57,8 @@ const I = {
   keyboard: sv('<rect class="d" x="2" y="5" width="20" height="14" rx="2.5"/><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12.5h.01M10 12.5h.01M14 12.5h.01M18 12.5h.01M7.5 16h9"/>'),
   palette: sv('<path class="d" d="M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="14.5" cy="7" r="1"/><circle cx="17" cy="10.5" r="1"/>'),
   crest: sv('<path class="d" d="M12 7l6.2 2.3v5.2c0 3.7-2.7 6.6-6.2 8-3.5-1.4-6.2-4.3-6.2-8V9.3z"/><path d="M12 7l6.2 2.3v5.2c0 3.7-2.7 6.6-6.2 8-3.5-1.4-6.2-4.3-6.2-8V9.3zM8.4 5.6l1.8 1.1L12 3.8l1.8 2.9 1.8-1.1-.6 2.3H9z"/><path d="M12 11c1.3 1.6 2.1 2.8 2.1 3.8a2.1 2.1 0 0 1-4.2 0c0-1 .8-2.2 2.1-3.8z"/><path d="M4.4 9.2c-1.1 2.6-.6 5.8 1.5 8.1M3.2 12.4l1.5.6M3.6 15.3l1.6.2M19.6 9.2c1.1 2.6.6 5.8-1.5 8.1M20.8 12.4l-1.5.6M20.4 15.3l-1.6.2M9 20.8c1.2.7 2.2 1 3 1.2.8-.2 1.8-.5 3-1.2"/>'),
+  weight: sv('<path class="d" d="M5.5 9h13l2.5 11.5H3z"/><path d="M5.5 9h13l2.5 11.5H3zM9.5 6a2.5 2.5 0 1 0 5 0 2.5 2.5 0 0 0-5 0M10 14.5h4"/>'),
+  copy: sv('<rect class="d" x="8" y="8" width="13" height="13" rx="2"/><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>'),
   sparkle: sv('<path class="d" d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z"/><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z"/>'),
 };
 
@@ -217,12 +219,34 @@ function durMin(e) {
 }
 // horário imprevisto (e.hora) substitui a janela; a janela substitui o imprevisto
 const isImp = (e) => slotIdx(e.slot) < 0 && e.hora != null;
-function slotIndexForOp(op) { let idx = 0; SLOTS.forEach((s, i) => { if (slotOp(s) <= op + 0.5) idx = i; }); return idx; }
+// horário imprevisto entra no card da janela mais próxima (ex.: 20:00 -> 21:00)
+function slotIndexForOp(op) {
+  let idx = 0, best = Infinity;
+  SLOTS.forEach((s, i) => { const d = Math.abs(slotOp(s) - op); if (d < best) { best = d; idx = i; } });
+  return idx;
+}
 const effSlotIdx = (e) => { const i = slotIdx(e.slot); if (i >= 0) return i; return e.hora != null ? slotIndexForOp(e.hora) : -1; };
 const plannedOp = (e) => { const i = slotIdx(e.slot); if (i >= 0) return slotOp(SLOTS[i]); return e.hora ?? null; };
 function slotLabel(e) { const i = slotIdx(e.slot); if (i >= 0) return TURNOS[SLOTS[i].turno].n; return e.hora != null ? 'imprevisto' : 'sem janela'; }
-const parseQty = (v) => { const n = Number(String(v || '').replace(/\./g, '').replace(',', '.')); return v && isFinite(n) && n > 0 ? n : null; };
-const fmtQty = (n, un) => `${Number(n).toLocaleString('pt-BR')} ${un || 'kg'}`;
+// lê números no formato brasileiro: 456 · 456,000 · 1.500,000 · 22,5 · 22.000
+function parseNum(v) {
+  let s = String(v ?? '').trim().replace(/\s/g, '');
+  if (!s) return null;
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  else if (/\.\d{3}(\.|$)/.test(s)) s = s.replace(/\./g, '');
+  const n = Number(s);
+  return isFinite(n) && n > 0 ? n : null;
+}
+const parseQty = parseNum;
+// sempre com 3 casas, como nos sistemas da empresa: 456 -> 456,000 · 22000 -> 22.000,000
+const fmt3 = (n) => Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+const fmtQty = (n, un) => `${fmt3(n)} ${un || 'kg'}`;
+// peso do carro: digitado em toneladas (22 ou 22,5); se vier já em kg (>= 1000) mantém
+function parsePesoKg(v) {
+  const n = parseNum(v);
+  if (n == null) return null;
+  return n >= 1000 ? n : Math.round(n * 1000 * 1000) / 1000;
+}
 // cada caminhão pode ter vários reprocessos: { qtd, un, lote }
 const getReps = (e) => e.reps ?? (e.repQtd ? [{ qtd: e.repQtd, un: e.repUn || 'kg', lote: '' }] : []);
 function repTotals(list) {
@@ -230,13 +254,32 @@ function repTotals(list) {
   list.forEach((e) => getReps(e).forEach((r) => { if (r.qtd) t[r.un || 'kg'] = (t[r.un || 'kg'] || 0) + Number(r.qtd); }));
   return Object.entries(t).map(([u, n]) => fmtQty(n, u)).join(' + ');
 }
+// etiquetas do caminhão — tocar copia o valor (para colar nos sistemas)
+const copyChip = (cls, icon, label, value, extra = '') =>
+  `<span class="ichip copyable ${cls}" role="button" tabindex="0" data-copy="${esc(value)}" title="Toque para copiar ${esc(value)}">${icon}${label} ${esc(value)}${extra}</span>`;
 function infoChips(e) {
   const out = [];
   if (isImp(e)) out.push(`<span class="ichip imp">${I.alarm}Imprevisto ${opToHHMM(e.hora)}</span>`);
-  getReps(e).forEach((r) => out.push(`<span class="ichip rep">${I.recycle}Reprocesso${r.qtd ? ' ' + fmtQty(r.qtd, r.un) : ''}${r.lote ? ` <b>· Lote ${esc(r.lote)}</b>` : ''}</span>`));
-  if (e.os) out.push(`<span class="ichip">${I.file}OS ${esc(e.os)}</span>`);
-  if (e.op) out.push(`<span class="ichip">${I.hash}OP ${esc(e.op)}</span>`);
+  if (e.peso) out.push(copyChip('peso', I.weight, 'Peso', fmt3(e.peso)));
+  getReps(e).forEach((r) => {
+    if (r.qtd) out.push(copyChip('rep', I.recycle, 'Reprocesso', fmt3(r.qtd), ` ${esc(r.un || 'kg')}`));
+    if (r.lote) out.push(copyChip('rep rep-lote', I.hash, 'Lote reproc.', r.lote));
+  });
+  if (e.os) out.push(copyChip('', I.file, 'Ordem', e.os));
+  if (e.op) out.push(copyChip('', I.hash, 'Lote', e.op));
+  if (e.ticket) out.push(copyChip('ticket', I.calClock, 'Ticket', e.ticket));
   return out.join('');
+}
+async function copyText(txt) {
+  try { await navigator.clipboard.writeText(txt); }
+  catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = txt; ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e2) { /* sem cópia */ }
+    ta.remove();
+  }
+  toast(`Copiado: ${txt}`);
 }
 function startOp(e, k) {
   if (e.t?.inicio) return msToOp(k, e.t.inicio);
@@ -571,7 +614,7 @@ function renderNextStep() {
       <div class="ns-body">
         <div class="ns-label">Próximo passo · ${esc(p.l)} · caminhão ${n.st.n + 1} de ${n.st.total}</div>
         <div class="ns-title">${esc(p.full)}</div>
-        <div class="ns-sub">${tm != null ? `<b>${opToHHMM(tm)}</b> · ` : ''}<b>${esc(e.material)}</b>${e.os ? ' · OS ' + esc(e.os) : ''} — ${fmtShort(fromKey(n.pk))}</div>
+        <div class="ns-sub">${tm != null ? `<b>${opToHHMM(tm)}</b> · ` : ''}<b>${esc(e.material)}</b>${e.os ? ' · Ordem ' + esc(e.os) : ''} — ${fmtShort(fromKey(n.pk))}</div>
       </div>
       <div class="ns-actions">
         <button class="btn btn-step c-${p.c}" data-prep-one="${p.k}" data-env="${e.id}" data-day="${n.pk}" title="Atalho: C">${I.check} Confirmar neste</button>
@@ -1341,7 +1384,7 @@ function renderRepRows(focusLast) {
   $('#repList').innerHTML = formReps.map((r, i) => `
     <div class="rep-row">
       <span class="rep-n">${i + 1}</span>
-      <input class="rq" type="text" inputmode="decimal" maxlength="12" placeholder="Quantidade" aria-label="Quantidade do reprocesso ${i + 1}" value="${r.qtd != null ? String(r.qtd).replace('.', ',') : ''}">
+      <input class="rq" type="text" inputmode="decimal" maxlength="12" placeholder="Quantidade" aria-label="Quantidade do reprocesso ${i + 1}" value="${r.qtd != null ? fmt3(r.qtd) : ''}">
       <select class="ru" aria-label="Unidade">${UNITS.map((u) => `<option ${u === (r.un || 'kg') ? 'selected' : ''}>${u}</option>`).join('')}</select>
       <input class="rl" type="text" maxlength="30" placeholder="Lote" aria-label="Lote do reprocesso ${i + 1}" value="${esc(r.lote || '')}">
       <button type="button" class="rep-del" data-rep-del="${i}" aria-label="Remover reprocesso ${i + 1}">${I.x}</button>
@@ -1403,6 +1446,9 @@ function openEnv(dayKey, id, slot) {
   form.hora.value = hv;
   setHoraMode(impMode ? 'imprevisto' : 'janela');
   form.op.value = e?.op || '';
+  form.ticket.value = e?.ticket || '';
+  form.pesoT.value = e?.peso ? (e.peso / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 3 }) : '';
+  updatePesoPreview();
   form.status.value = e?.status || 'programado';
   form.obs.value = e?.obs || '';
   updateHint();
@@ -1416,7 +1462,7 @@ function saveEnv() {
     slot: horaMode === 'janela' ? form.slot.value : '',
     hora: horaMode === 'imprevisto' && form.hora.value ? hhmmToOp(form.hora.value) : null,
     reps: readRepRows().filter((r) => r.qtd || r.lote), repQtd: undefined, repUn: undefined, os: form.os.value.trim(),
-    op: form.op.value.trim(), status: form.status.value, obs: form.obs.value.trim(),
+    op: form.op.value.trim(), ticket: form.ticket.value.trim(), peso: parsePesoKg(form.pesoT.value), status: form.status.value, obs: form.obs.value.trim(),
   };
   if (!data.material) { form.material.focus(); return false; }
   if (horaMode === 'imprevisto' && data.hora == null) { form.hora.focus(); toast('Informe o horário imprevisto'); return false; }
@@ -1453,6 +1499,7 @@ document.addEventListener('click', (ev) => {
   let el;
 
   if ((el = c('.tab-btn'))) return setTab(el.dataset.tab);
+  if ((el = c('[data-copy]'))) { ev.preventDefault(); ev.stopPropagation(); copyText(el.dataset.copy); return; }
   if ((el = c('[data-hora-mode]'))) {
     setHoraMode(el.dataset.horaMode);
     if (horaMode === 'imprevisto') { if (!form.hora.value && form.slot.value) form.hora.value = SLOTS[slotIdx(form.slot.value)].t; form.hora.focus(); }
@@ -1627,6 +1674,19 @@ document.addEventListener('change', (ev) => {
 });
 
 $('#repList').addEventListener('input', updateRepTotal);
+// ao sair do campo, a quantidade vira 456,000
+$('#repList').addEventListener('focusout', (ev) => {
+  if (!ev.target.matches('.rq')) return;
+  const n = parseNum(ev.target.value);
+  if (n != null) ev.target.value = fmt3(n);
+});
+function updatePesoPreview() {
+  const kg = parsePesoKg(form.pesoT.value);
+  const b = $('#pesoPreview');
+  b.hidden = kg == null;
+  if (kg != null) { b.dataset.copy = fmt3(kg); $('#pesoVal').textContent = fmt3(kg); }
+}
+form.pesoT.addEventListener('input', updatePesoPreview);
 // horário exato do ajuste: lê enquanto digita, sem redesenhar
 document.addEventListener('input', (ev) => {
   const t = ev.target;
