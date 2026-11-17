@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=8">
+  <link rel="stylesheet" href="style.css?v=10">
   <script>
     // aplica tema e preferências antes de desenhar (evita "piscar")
     (function () {
@@ -52,6 +52,7 @@
       <button class="tab-btn" data-tab="hoje"><span data-ic="scroll"></span>Hoje</button>
       <button class="tab-btn" data-tab="agenda"><span data-ic="clock"></span>Agenda</button>
       <button class="tab-btn" data-tab="preparo"><span data-ic="clipboard"></span>Preparo</button>
+      <button class="tab-btn" data-tab="percurso"><span data-ic="route"></span>Percurso</button>
       <button class="tab-btn" data-tab="historico"><span data-ic="chart"></span>Histórico</button>
     </nav>
 
@@ -187,6 +188,24 @@
       <div id="prepBody"></div>
     </section>
 
+    <!-- ================= PERCURSO ================= -->
+    <section class="view" id="view-percurso" hidden>
+      <div class="page-top">
+        <div>
+          <span class="eyebrow">Viagem até a fábrica</span>
+          <h1 class="title">Percurso</h1>
+          <p class="muted">Informe a saída do caminhão e veja a chegada e todas as janelas possíveis depois dela</p>
+        </div>
+      </div>
+      <div class="grid-perc">
+        <section class="card" id="pcCalc"></section>
+        <div class="col">
+          <section class="card" id="pcOut"></section>
+        </div>
+      </div>
+      <section class="card" id="pcTransit" style="margin-top:20px"></section>
+    </section>
+
     <!-- ================= HISTÓRICO ================= -->
     <section class="view" id="view-historico" hidden>
       <div class="page-top">
@@ -215,6 +234,10 @@
     <button class="tab-btn" data-tab="preparo">
       <span data-ic="clipboard"></span>
       <span>Preparo</span>
+    </button>
+    <button class="tab-btn" data-tab="percurso">
+      <span data-ic="route"></span>
+      <span>Percurso</span>
     </button>
     <button class="tab-btn" data-tab="historico">
       <span data-ic="chart"></span>
@@ -311,6 +334,14 @@
         <label class="span-2">Ticket
           <input name="ticket" maxlength="40" placeholder="Nº do ticket da Revolog">
         </label>
+        <div class="span-2 field perc-field">
+          <span class="fl"><span data-ic="route"></span>Percurso (opcional)</span>
+          <div class="perc-row">
+            <select name="origem" aria-label="Origem"></select>
+            <input type="datetime-local" name="saida" aria-label="Saída do percurso">
+          </div>
+          <small class="perc-prev" id="percPrev"></small>
+        </div>
         <label class="span-2">Observações
           <textarea name="obs" rows="2" maxlength="300" placeholder="Ocorrências, justificativas para a Revolog…"></textarea>
         </label>
@@ -427,7 +458,7 @@
     <div class="keys">
       <div class="keys-col">
         <h4>Navegar</h4>
-        <p><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd><span>Hoje · Agenda · Preparo · Histórico</span></p>
+        <p><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd><kbd>5</kbd><span>Hoje · Agenda · Preparo · Percurso · Histórico</span></p>
         <p><kbd>←</kbd><kbd>→</kbd><span>Dia anterior / próximo (Agenda e Preparo)</span></p>
         <p><kbd>H</kbd><span>Voltar para o dia de hoje</span></p>
         <h4>Sequência</h4>
@@ -453,6 +484,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>
