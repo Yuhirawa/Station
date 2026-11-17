@@ -32,3 +32,7 @@ No celular, abra o link e use **Adicionar à tela inicial** para usar como aplic
 | `style.css` | Visual (tema claro/escuro, responsivo) |
 | `app.js` | Lógica: checklist, janelas, histórico — as etapas e tipos de envase ficam no topo do arquivo, fáceis de editar |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Modo aplicativo/offline |
+
+## Atualizar para uma versão nova
+
+Substitua todos os arquivos no repositório. Os arquivos levam um número de versão (`?v=5` no `index.html` e `filling-v5` no `sw.js`), então o navegador busca tudo novo de uma vez. Se mesmo assim algo parecer antigo, feche e abra a página de novo.

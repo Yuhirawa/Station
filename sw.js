@@ -1,6 +1,7 @@
 // Service worker: funciona offline e sempre busca a versão mais nova quando há internet.
-const CACHE = 'filling-v4';
-const ASSETS = ['./', './index.html', './style.css', './app.js', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png'];
+// Ao publicar uma versão nova, troque o número abaixo e o ?v= no index.html.
+const CACHE = 'filling-v5';
+const ASSETS = ['./', './index.html', './style.css?v=5', './app.js?v=5', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
@@ -10,15 +11,18 @@ self.addEventListener('activate', (e) => {
 });
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  const sameOrigin = new URL(e.request.url).origin === location.origin;
+  // mesma origem: sempre revalida com o servidor (evita misturar arquivos antigos e novos)
+  const req = sameOrigin && e.request.mode !== 'navigate' ? new Request(e.request.url, { cache: 'no-cache', credentials: 'same-origin' }) : e.request;
   e.respondWith(
-    fetch(e.request)
+    fetch(req)
       .then((res) => {
-        if (res.ok && new URL(e.request.url).origin === location.origin) {
+        if (res.ok && sameOrigin) {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(e.request, copy));
         }
         return res;
       })
-      .catch(() => caches.match(e.request, { ignoreSearch: true }).then((r) => r || caches.match('./index.html')))
+      .catch(() => caches.match(e.request).then((r) => r || caches.match('./index.html')))
   );
 });

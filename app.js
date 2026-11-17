@@ -1148,19 +1148,34 @@ function openAdjust(k, id, preset = {}) {
   renderAdjust();
   if (!adjDlg.open) adjDlg.showModal();
 }
-function renderAdjust() {
-  const e = findTruck(adj.k, adj.id);
+function adjSummary() {
   const ref = adj.mode === 'fim' ? adj.base : (adj.planned ?? adj.base);
   const delta = adj.value - ref;
   const aff = adj.mode === 'fim'
     ? simulateCascade(adj.k, adj.id, (c) => { c.dur = Math.max(0.25, (adj.value - startOp(c, adj.k)) / 60); })
     : simulateCascade(adj.k, adj.id, (c) => { c.ajuste = adj.value; });
+  return {
+    ref, delta,
+    deltaTxt: Math.abs(delta) >= 1 ? fmtDelta(delta) : 'sem alteração',
+    affHtml: aff.length ? `<small class="aff">Vai afetar: ${aff.map((x) => `${esc(x.material)} → ${opToHHMM(x.ajuste)}`).join(' · ')}</small>` : '<small>Nenhum caminhão seguinte será afetado.</small>',
+  };
+}
+// atualiza só o resumo (usado enquanto digita o horário, sem recriar o campo)
+function updateAdjSummary() {
+  const sm = adjSummary();
+  $('#adjNew').textContent = opToHHMM(adj.value);
+  $('#adjDelta').textContent = sm.deltaTxt;
+  $('#adjAff').innerHTML = sm.affHtml;
+}
+function renderAdjust() {
+  const e = findTruck(adj.k, adj.id);
+  const { ref, deltaTxt, affHtml } = adjSummary();
   const chips = [-30, -15, 15, 30, 45, 60, 90, 120];
   $('#adjBody').innerHTML = `
     <div class="adj-times">
       <div><small>${adj.mode === 'fim' ? 'Término previsto' : adj.planned != null ? 'Previsto' : 'Atual'}</small><b>${opToHHMM(ref)}</b><em>${adj.mode === 'fim' ? 'início ' + fmtTime(e.t.inicio) : adj.planned != null ? 'janela sugerida' : ''}</em></div>
       <div class="arrow">${I.arrow}</div>
-      <div class="new"><small>Novo horário</small><b>${opToHHMM(adj.value)}</b><em>${Math.abs(delta) >= 1 ? fmtDelta(delta) : 'sem alteração'}</em></div>
+      <div class="new"><small>Novo horário</small><b id="adjNew">${opToHHMM(adj.value)}</b><em id="adjDelta">${deltaTxt}</em></div>
     </div>
     <span class="adj-label">Ajuste rápido</span>
     <div class="adj-chips">${chips.map((c) => `<button type="button" class="adj-chip ${c < 0 ? 'minus' : 'plus'}" data-adj-add="${c}">${c < 0 ? '−' : '+'}${Math.abs(c) >= 60 ? (Math.abs(c) / 60 + 'h').replace('.5h', 'h30') : Math.abs(c) + ' min'}</button>`).join('')}</div>
@@ -1175,7 +1190,7 @@ function renderAdjust() {
     <label class="switch">
       <input type="checkbox" id="adjPush" ${adj.push ? 'checked' : ''}><span class="knob"></span>
       <div><b>Empurrar os caminhões seguintes</b>
-        ${aff.length ? `<small class="aff">Vai afetar: ${aff.map((x) => `${esc(x.material)} → ${opToHHMM(x.ajuste)}`).join(' · ')}</small>` : '<small>Nenhum caminhão seguinte será afetado.</small>'}
+        <span id="adjAff">${affHtml}</span>
       </div>
     </label>
     <div class="sheet-foot">
@@ -1360,9 +1375,13 @@ document.addEventListener('click', (ev) => {
   if (c('[data-new-imp]')) return openEnv(currentTab === 'preparo' ? prDay : agDay, null, '__imp');
 
   // diálogo de ajuste
-  if ((el = c('[data-adj-add]'))) { adj.value = Math.max(-60, adj.value + Number(el.dataset.adjAdd)); return renderAdjust(); }
-  if (c('[data-adj-now]')) { adj.value = Math.round(nowOp(adj.k)); return renderAdjust(); }
-  if ((el = c('[data-adj-motivo]'))) { adj.motivo = adj.motivo === el.dataset.adjMotivo ? '' : el.dataset.adjMotivo; adj.detail = $('#adjDetail').value; return renderAdjust(); }
+  if ((el = c('[data-adj-add]'))) { adj.value = Math.max(-60, adj.value + Number(el.dataset.adjAdd)); $('#adjTime').value = opToHHMM(adj.value); return updateAdjSummary(); }
+  if (c('[data-adj-now]')) { adj.value = Math.round(nowOp(adj.k)); $('#adjTime').value = opToHHMM(adj.value); return updateAdjSummary(); }
+  if ((el = c('[data-adj-motivo]'))) {
+    adj.motivo = adj.motivo === el.dataset.adjMotivo ? '' : el.dataset.adjMotivo;
+    $$('.motivo-chip').forEach((b) => b.classList.toggle('on', b.dataset.adjMotivo === adj.motivo));
+    return;
+  }
   if (c('[data-adj-save]')) { adj.detail = $('#adjDetail').value; return saveAdjust(); }
   if (c('[data-adj-reset]')) {
     const e = findTruck(adj.k, adj.id);
@@ -1498,7 +1517,7 @@ document.addEventListener('change', (ev) => {
   const t = ev.target;
   if (t.matches('[data-ag-input]') && t.value) { agDay = t.value; return render(); }
   if (t.matches('[data-pr-input]') && t.value) { prDay = t.value; openTrucks.clear(); return render(); }
-  if (t.id === 'adjTime' && t.value) { adj.value = hhmmToOp(t.value); adj.detail = $('#adjDetail').value; return renderAdjust(); }
+  if (t.id === 'adjTime') return;
   if (t.id === 'adjPush') { adj.push = t.checked; return; }
   if (t.matches('[data-rot-note]')) {
     const st = (ensureDay(todayKey()).routine[t.dataset.rotNote] ||= {});
@@ -1510,6 +1529,18 @@ document.addEventListener('change', (ev) => {
 });
 
 $('#repList').addEventListener('input', updateRepTotal);
+// horário exato do ajuste: lê enquanto digita, sem redesenhar
+document.addEventListener('input', (ev) => {
+  const t = ev.target;
+  if (t.id === 'adjTime' && adj) { if (t.value) { adj.value = hhmmToOp(t.value); updateAdjSummary(); } return; }
+  if (form.contains(t) && t.name === 'hora') updateHint();
+});
+// abre o calendário ao tocar no botão de data dos dias (no PC só abria pelo ícone)
+document.addEventListener('click', (ev) => {
+  const inp = ev.target.closest('.date-pick input[type=date]');
+  if (!inp || typeof inp.showPicker !== 'function') return;
+  try { inp.showPicker(); } catch (e) { /* alguns navegadores bloqueiam; segue normal */ }
+}, true);
 $('#repList').addEventListener('change', updateRepTotal);
 $('#notes').addEventListener('input', (ev) => {
   clearTimeout(notesTimer);
@@ -1604,6 +1635,17 @@ setInterval(() => {
   if (currentTab === 'agenda' && agDay === currentOpDayKey()) render();
 }, 30000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
+
+/* ================= Proteção contra erros ================= */
+let lastErr = 0;
+function showError(err) {
+  console.error(err);
+  if (Date.now() - lastErr < 4000) return;
+  lastErr = Date.now();
+  toast('Algo deu errado. Recarregue a página.', 'Recarregar', () => location.reload());
+}
+window.addEventListener('error', (ev) => showError(ev.error || ev.message));
+window.addEventListener('unhandledrejection', (ev) => showError(ev.reason));
 
 /* ================= Início ================= */
 $$('[data-ic]').forEach((el) => { el.innerHTML = I[el.dataset.ic] || ''; });
