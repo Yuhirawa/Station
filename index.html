@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Filling · Painel Real</title>
+  <meta name="description" content="Checklist diária, agenda de caminhões e preparo de envases.">
+  <meta name="theme-color" content="#0a0610">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    try {
+      var s = JSON.parse(localStorage.getItem('filling-painel-v1') || '{}');
+      var t = (s.settings && s.settings.theme) || 'dark';
+      if (t === 'auto') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      document.documentElement.dataset.theme = t;
+    } catch (e) { document.documentElement.dataset.theme = 'dark'; }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="icons/icon.svg" alt="" width="38" height="38">
+      <div>
+        <strong>Filling</strong>
+        <span>Painel Real de Envase</span>
+      </div>
+    </div>
+
+    <nav class="tabs" aria-label="Seções">
+      <button class="tab-btn" data-tab="hoje">Hoje</button>
+      <button class="tab-btn" data-tab="agenda">Agenda</button>
+      <button class="tab-btn" data-tab="preparo">Preparo</button>
+      <button class="tab-btn" data-tab="historico">Histórico</button>
+    </nav>
+
+    <div class="top-actions">
+      <div class="clock" id="clock" aria-live="polite"></div>
+      <button class="icon-btn" id="themeBtn" title="Alternar tema" aria-label="Alternar tema">
+        <svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+      <button class="icon-btn" id="settingsBtn" title="Configurações e backup" aria-label="Configurações">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ================= HOJE ================= -->
+    <section class="view" id="view-hoje" hidden>
+      <div class="hero" id="hero"></div>
+      <div class="next-step" id="nextStep"></div>
+
+      <div class="grid-2">
+        <div class="col">
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2>Sequência Filling</h2>
+                <p class="muted" id="seqSub"></p>
+              </div>
+              <span class="pill" id="seqCount"></span>
+            </div>
+            <ol class="tasks" id="seqList"></ol>
+            <form class="add-extra" id="extraForm" autocomplete="off">
+              <input id="extraInput" type="text" placeholder="+ Tarefa avulsa para hoje" maxlength="120" aria-label="Nova tarefa avulsa">
+              <button type="submit" class="btn btn-ghost">Adicionar</button>
+            </form>
+          </section>
+        </div>
+
+        <div class="col">
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2>Caminhões de hoje</h2>
+                <p class="muted" id="todaySub">Chegada, envase e ajustes de horário</p>
+              </div>
+              <button class="btn btn-ghost btn-sm" data-goto="agenda" data-day="today">Agenda</button>
+            </div>
+            <div id="todayTrucks"></div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2>Rotina e demandas</h2>
+                <p class="muted">Diárias e conforme demanda</p>
+              </div>
+              <span class="pill" id="rotCount"></span>
+            </div>
+            <ul class="tasks rotina" id="rotList"></ul>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2>Anotações do dia</h2>
+                <p class="muted">Pendências, ocorrências, lembretes</p>
+              </div>
+              <span class="saved muted" id="notesSaved"></span>
+            </div>
+            <textarea id="notes" rows="5" placeholder="Ex.: placa ABC-1234 atrasou 2h — justificado na Revolog."></textarea>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= AGENDA ================= -->
+    <section class="view" id="view-agenda" hidden>
+      <div class="page-top">
+        <div>
+          <span class="eyebrow">Agenda de caminhões</span>
+          <h1 class="title">Horários do dia</h1>
+          <p class="muted">Operação: segunda 07:15 → sábado 07:15 · 3 turnos · até 7 janelas</p>
+        </div>
+        <button class="btn btn-primary hide-mobile" data-new-truck>
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Novo caminhão
+        </button>
+      </div>
+
+      <div class="day-picker" id="agDays"></div>
+      <div class="banner" id="agBanner" hidden></div>
+
+      <section class="card ruler-card">
+        <div class="card-head">
+          <div>
+            <h2>Régua do dia</h2>
+            <p class="muted">Faixa de cima: previsto · faixa de baixo: real / ajustado</p>
+          </div>
+          <div class="ruler-legend">
+            <span><i class="lg-plan"></i>Previsto</span>
+            <span><i class="lg-real"></i>Real</span>
+            <span><i class="lg-now"></i>Agora</span>
+          </div>
+        </div>
+        <div class="ruler-scroll" id="rulerScroll"><div id="ruler"></div></div>
+      </section>
+
+      <div class="grid-plan">
+        <div class="col">
+          <div class="timeline" id="timeline"></div>
+          <div id="unassigned"></div>
+        </div>
+        <aside class="col">
+          <section class="card" id="capCard"></section>
+          <section class="card legend-card">
+            <h3 class="mini-title">Peso de cada tipo de envase</h3>
+            <ul class="legend" id="legend"></ul>
+          </section>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ================= PREPARO ================= -->
+    <section class="view" id="view-preparo" hidden>
+      <div class="page-top">
+        <div>
+          <span class="eyebrow">Programação</span>
+          <h1 class="title">Preparo dos caminhões</h1>
+          <p class="muted">Confirme as 7 etapas caminhão por caminhão, ou cada etapa em todos de uma vez</p>
+        </div>
+      </div>
+      <div class="day-picker" id="prDays"></div>
+      <section class="card prep-summary" id="prepSummary"></section>
+      <div id="prepBody"></div>
+    </section>
+
+    <!-- ================= HISTÓRICO ================= -->
+    <section class="view" id="view-historico" hidden>
+      <div class="page-top">
+        <div>
+          <span class="eyebrow">Registro</span>
+          <h1 class="title">Histórico</h1>
+          <p class="muted">Últimos 14 dias úteis</p>
+        </div>
+      </div>
+      <div id="history"></div>
+    </section>
+  </main>
+
+  <button class="fab" id="fab" data-new-truck aria-label="Novo caminhão" hidden>
+    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+
+  <nav class="bottom-nav" aria-label="Seções">
+    <button class="tab-btn" data-tab="hoje">
+      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span>Hoje</span>
+    </button>
+    <button class="tab-btn" data-tab="agenda">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <span>Agenda</span>
+    </button>
+    <button class="tab-btn" data-tab="preparo">
+      <svg viewBox="0 0 24 24"><path d="M3 17h2l1-9h12l1 9h2"/><circle cx="7.5" cy="18.5" r="1.5"/><circle cx="16.5" cy="18.5" r="1.5"/><path d="M9 8V5h6v3"/></svg>
+      <span>Preparo</span>
+    </button>
+    <button class="tab-btn" data-tab="historico">
+      <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16v-5M12 16V8M17 16v-3"/></svg>
+      <span>Histórico</span>
+    </button>
+  </nav>
+
+  <!-- ================= DIÁLOGO: CAMINHÃO ================= -->
+  <dialog id="envDlg" class="sheet">
+    <form id="envForm" method="dialog" autocomplete="off">
+      <div class="sheet-head">
+        <div>
+          <span class="eyebrow">Caminhão</span>
+          <h2 id="envDlgTitle">Novo caminhão</h2>
+        </div>
+        <button type="button" class="icon-btn" data-close aria-label="Fechar">
+          <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="form-grid">
+        <label class="span-2">Material *
+          <input name="material" required maxlength="80" list="matList" placeholder="Ex.: Acronal 1569">
+          <datalist id="matList"></datalist>
+        </label>
+        <label>Tipo de envase
+          <select name="tipo"></select>
+        </label>
+        <label>Janela
+          <select name="slot"></select>
+        </label>
+        <label>Dia
+          <input type="date" name="dia" required>
+        </label>
+        <label>Status
+          <select name="status"></select>
+        </label>
+        <label>Janelas ocupadas
+          <select name="janelas">
+            <option value="auto">Automático</option>
+            <option value="1">1</option>
+            <option value="1.5">1,5</option>
+            <option value="2">2</option>
+            <option value="2.5">2,5</option>
+            <option value="3">3</option>
+          </select>
+        </label>
+        <label>Duração do envase
+          <select name="dur">
+            <option value="auto">Automático</option>
+            <option value="2">2 h</option>
+            <option value="2.5">2h30</option>
+            <option value="3">3 h</option>
+            <option value="3.5">3h30</option>
+            <option value="4">4 h</option>
+            <option value="4.5">4h30</option>
+            <option value="5">5 h</option>
+            <option value="6">6 h</option>
+            <option value="7">7 h</option>
+            <option value="8">8 h</option>
+          </select>
+        </label>
+        <label>Cliente / destino
+          <input name="cliente" maxlength="60">
+        </label>
+        <label>Placa / transportadora
+          <input name="placa" maxlength="40">
+        </label>
+        <label class="span-2">OP / lote
+          <input name="op" maxlength="40">
+        </label>
+        <label class="span-2">Observações
+          <textarea name="obs" rows="2" maxlength="300" placeholder="Ocorrências, justificativas para a Revolog…"></textarea>
+        </label>
+      </div>
+      <p class="hint" id="tipoHint"></p>
+      <div class="sheet-foot">
+        <button type="button" class="btn btn-danger-ghost" id="envDelete">Excluir</button>
+        <button type="button" class="btn btn-ghost" id="envDuplicate">Duplicar</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-ghost" data-close>Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ================= DIÁLOGO: AJUSTAR HORÁRIO ================= -->
+  <dialog id="adjDlg" class="sheet">
+    <div class="sheet-head">
+      <div>
+        <span class="eyebrow" id="adjEyebrow">Ajustar horário</span>
+        <h2 id="adjTitle"></h2>
+      </div>
+      <button type="button" class="icon-btn" data-close aria-label="Fechar">
+        <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="adj" id="adjBody"></div>
+  </dialog>
+
+  <!-- ================= DIÁLOGO: CONFIGURAÇÕES ================= -->
+  <dialog id="setDlg" class="sheet">
+    <div class="sheet-head">
+      <div>
+        <span class="eyebrow">Painel</span>
+        <h2>Configurações</h2>
+      </div>
+      <button type="button" class="icon-btn" data-close aria-label="Fechar">
+        <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="settings">
+      <div class="set-row">
+        <div><strong>Tema</strong><p class="muted">Noite real (escuro), pergaminho (claro) ou igual ao sistema</p></div>
+        <div class="seg" id="themeSeg">
+          <button data-theme-set="auto">Auto</button>
+          <button data-theme-set="dark">Escuro</button>
+          <button data-theme-set="light">Claro</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <div><strong>Backup</strong><p class="muted">Os dados ficam salvos neste navegador. Exporte para levar a outro aparelho.</p></div>
+        <div class="set-actions">
+          <button class="btn btn-ghost" id="exportBtn">Exportar</button>
+          <label class="btn btn-ghost">Importar<input type="file" id="importInput" accept="application/json,.json" hidden></label>
+        </div>
+      </div>
+      <div class="set-row">
+        <div><strong>Reiniciar o dia</strong><p class="muted">Desmarca a sequência e a rotina de hoje</p></div>
+        <button class="btn btn-danger-ghost" id="resetDayBtn">Reiniciar</button>
+      </div>
+      <div class="set-row">
+        <div><strong>Apagar tudo</strong><p class="muted">Remove histórico e programações deste navegador</p></div>
+        <button class="btn btn-danger-ghost" id="wipeBtn">Apagar</button>
+      </div>
+      <p class="muted small">Dica: no celular, abra o menu do navegador e toque em <b>Adicionar à tela inicial</b> para usar como aplicativo.</p>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
