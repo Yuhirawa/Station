@@ -49,6 +49,14 @@ const I = {
   layers: sv('<path class="d" d="M12 2.5l9.5 5-9.5 5-9.5-5z"/><path d="M12 2.5l9.5 5-9.5 5-9.5-5zM2.5 12l9.5 5 9.5-5M2.5 16.5l9.5 5 9.5-5"/>'),
   gauge: sv('<path class="d" d="M3 15a9 9 0 0 1 18 0z"/><path d="M3 15a9 9 0 0 1 18 0M12 15l4-5M6.5 15h.01M17.5 15h.01M12 8.5v.01"/><path d="M3 19h18"/>'),
   gear: sv('<circle cx="12" cy="12" r="3"/><path class="d" d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
+  tanker: sv('<path class="d" d="M2.5 7.5h12.5a3.5 3.5 0 0 1 3.5 3.5v3.5h-16z"/><path d="M2.5 7.5h12.5a3.5 3.5 0 0 1 3.5 3.5v3.5h-16zM18.5 10.5h1.6l1.9 2.4v3.6h-3.5M2.5 14.5v2h16M7.5 7.5V5.5h3v2"/><circle cx="6.5" cy="17.5" r="1.9"/><circle cx="15.5" cy="17.5" r="1.9"/>'),
+  ibc: sv('<rect class="d" x="4" y="4.5" width="16" height="13.5" rx="1.5"/><rect x="4" y="4.5" width="16" height="13.5" rx="1.5"/><path d="M4 9h16M4 13.5h16M9.3 4.5V18M14.7 4.5V18M10.5 2.5h3v2M6 18v3M18 18v3M4 21h16"/>'),
+  pump: sv('<circle class="d" cx="9" cy="13" r="6.5"/><circle cx="9" cy="13" r="6.5"/><path d="M9 13l3-3M5.5 13h.01M9 9.2v.01M12.5 13h.01M15.5 13h3V8h3M18.5 8V4.5M2.5 21h13"/>'),
+  drip: sv('<path class="d" d="M12 2.5c3.3 4.8 6.5 8.2 6.5 11.8a6.5 6.5 0 0 1-13 0c0-3.6 3.2-7 6.5-11.8z"/><path d="M12 2.5c3.3 4.8 6.5 8.2 6.5 11.8a6.5 6.5 0 0 1-13 0c0-3.6 3.2-7 6.5-11.8z"/><path d="M8.8 14.8a3.2 3.2 0 0 0 3.2 3.2"/>'),
+  drum: sv('<path class="d" d="M6 4.5v15c0 1 2.7 1.8 6 1.8s6-.8 6-1.8v-15"/><ellipse cx="12" cy="4.5" rx="6" ry="1.8"/><path d="M6 4.5v15c0 1 2.7 1.8 6 1.8s6-.8 6-1.8v-15M6 9.8c0 1 2.7 1.8 6 1.8s6-.8 6-1.8M6 14.8c0 1 2.7 1.8 6 1.8s6-.8 6-1.8"/>'),
+  keyboard: sv('<rect class="d" x="2" y="5" width="20" height="14" rx="2.5"/><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12.5h.01M10 12.5h.01M14 12.5h.01M18 12.5h.01M7.5 16h9"/>'),
+  palette: sv('<path class="d" d="M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="14.5" cy="7" r="1"/><circle cx="17" cy="10.5" r="1"/>'),
+  crest: sv('<path class="d" d="M12 7l6.2 2.3v5.2c0 3.7-2.7 6.6-6.2 8-3.5-1.4-6.2-4.3-6.2-8V9.3z"/><path d="M12 7l6.2 2.3v5.2c0 3.7-2.7 6.6-6.2 8-3.5-1.4-6.2-4.3-6.2-8V9.3zM8.4 5.6l1.8 1.1L12 3.8l1.8 2.9 1.8-1.1-.6 2.3H9z"/><path d="M12 11c1.3 1.6 2.1 2.8 2.1 3.8a2.1 2.1 0 0 1-4.2 0c0-1 .8-2.2 2.1-3.8z"/><path d="M4.4 9.2c-1.1 2.6-.6 5.8 1.5 8.1M3.2 12.4l1.5.6M3.6 15.3l1.6.2M19.6 9.2c1.1 2.6.6 5.8-1.5 8.1M20.8 12.4l-1.5.6M20.4 15.3l-1.6.2M9 20.8c1.2.7 2.2 1 3 1.2.8-.2 1.8-.5 3-1.2"/>'),
   sparkle: sv('<path class="d" d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z"/><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z"/>'),
 };
 
@@ -105,11 +113,11 @@ const CAP = SLOTS.length;
 
 // w = janelas ocupadas · dur = horas de envase previstas
 const TYPES = {
-  padrao: { n: 'Carreta padrão', mono: 'CP', w: 1, dur: 3, leg: 'Envase normal' },
-  ibc: { n: 'IBC de papelão', mono: 'IBC', w: 1.5, dur: 4.5, leg: 'Ocupa 1½ janela', hint: 'IBC de papelão ocupa 1½ janela.' },
-  coater: { n: 'Coater Ready', mono: 'CR', w: 1.5, dur: 5, leg: 'Bomba em pressão mín. ≈ 5 h', hint: 'Pressão mínima da bomba: ~5 h de envase → 1½ janela.' },
-  viscoso: { n: 'Muito viscoso', mono: 'VIS', w: 1.5, dur: 4, leg: 'Ex.: Acronal 1569 · +3 h', hint: 'Ex.: Acronal 1569 — pode passar de 3 h. Ajuste a duração se precisar.' },
-  tambor: { n: 'Tambor / Bombona', mono: 'TB', w: 'turno', dur: 'turno', leg: 'Turno inteiro (2 a 3 janelas)', hint: 'Ocupa o turno inteiro (2 a 3 janelas), a partir da janela escolhida.' },
+  padrao: { n: 'Carreta padrão', mono: 'CP', ic: 'tanker', w: 1, dur: 3, leg: 'Envase normal' },
+  ibc: { n: 'IBC de papelão', mono: 'IBC', ic: 'ibc', w: 1.5, dur: 4.5, leg: 'Ocupa 1½ janela', hint: 'IBC de papelão ocupa 1½ janela.' },
+  coater: { n: 'Coater Ready', mono: 'CR', ic: 'pump', w: 1.5, dur: 5, leg: 'Bomba em pressão mín. ≈ 5 h', hint: 'Pressão mínima da bomba: ~5 h de envase → 1½ janela.' },
+  viscoso: { n: 'Muito viscoso', mono: 'VIS', ic: 'drip', w: 1.5, dur: 4, leg: 'Ex.: Acronal 1569 · +3 h', hint: 'Ex.: Acronal 1569 — pode passar de 3 h. Ajuste a duração se precisar.' },
+  tambor: { n: 'Tambor / Bombona', mono: 'TB', ic: 'drum', w: 'turno', dur: 'turno', leg: 'Turno inteiro (2 a 3 janelas)', hint: 'Ocupa o turno inteiro (2 a 3 janelas), a partir da janela escolhida.' },
 };
 
 const STATUS = { programado: 'Programado', chegou: 'Chegou', envasando: 'Envasando', concluido: 'Concluído', cancelado: 'Cancelado' };
@@ -426,7 +434,9 @@ function setTab(tab, push = true) {
 }
 
 let toastTimer;
+let lastUndo = null; // última ação que pode ser desfeita (atalho Z)
 function toast(msg, action, fn) {
+  if (action === 'Desfazer') lastUndo = fn;
   const t = $('#toast');
   t.innerHTML = `<span>${esc(msg)}</span>` + (action ? `<button type="button">${esc(action)}</button>` : '');
   if (action) t.querySelector('button').onclick = () => { t.classList.remove('show'); fn(); };
@@ -435,16 +445,35 @@ function toast(msg, action, fn) {
   toastTimer = setTimeout(() => t.classList.remove('show'), action ? 6000 : 2600);
 }
 
+// tema (Noite Real, Pergaminho, Carmesim, Cavaleiro), cor de destaque, densidade e tamanho da letra
 function applyTheme() {
-  let t = S.settings.theme || 'dark';
+  const st = S.settings;
+  let t = st.theme || 'dark';
   if (t === 'auto') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-  document.documentElement.dataset.theme = t;
-  $('meta[name=theme-color]').content = t === 'light' ? '#f4eee2' : '#0a0610';
-  $$('#themeSeg button').forEach((b) => b.classList.toggle('active', b.dataset.themeSet === (S.settings.theme || 'dark')));
+  const root = document.documentElement;
+  root.dataset.theme = t;
+  root.dataset.mode = t === 'light' ? 'light' : 'dark';
+  root.dataset.accent = !st.accent || st.accent === 'auto' ? (t === 'knight' ? 'silver' : 'gold') : st.accent;
+  root.dataset.density = st.density || 'comfort';
+  root.dataset.font = st.font || 'M';
+  const bg = getComputedStyle(root).getPropertyValue('--bg').trim();
+  if (bg) $('meta[name=theme-color]').content = bg;
+  const mark = (sel, attr, val) => $$(sel).forEach((b) => b.classList.toggle('active', b.dataset[attr] === val));
+  mark('[data-theme-set]', 'themeSet', st.theme || 'dark');
+  mark('[data-accent-set]', 'accentSet', st.accent || 'auto');
+  mark('[data-density-set]', 'densitySet', st.density || 'comfort');
+  mark('[data-font-set]', 'fontSet', st.font || 'M');
+  const ni = $('#nameInput');
+  if (ni && document.activeElement !== ni) ni.value = st.name || '';
+}
+function greeting() {
+  const h = new Date().getHours();
+  const g = h < 5 ? 'Boa noite' : h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+  return S.settings.name ? `${g}, ${S.settings.name}` : g;
 }
 const tagsHtml = (tags) => (tags || []).map((t) => `<span class="tag c-${TAGS[t] || 'gold'}">${esc(t)}</span>`).join('');
 const statusPill = (e) => `<span class="status-pill st-${e.status}">${STATUS[e.status] || e.status}</span>`;
-const mono = (e) => `<span class="mono" title="${esc(TYPES[e.tipo]?.n || '')}">${esc(TYPES[e.tipo]?.mono || '?')}</span>`;
+const mono = (e) => `<span class="tico" title="${esc(TYPES[e.tipo]?.n || '')}">${I[TYPES[e.tipo]?.ic] || ''}</span>`;
 function delayHtml(min) {
   if (min == null || Math.abs(min) < 1) return '';
   return `<span class="delay ${min > 0 ? 'late' : 'early'}">${fmtDelta(min)}</span>`;
@@ -459,6 +488,12 @@ function nextTruckInfo() {
   const running = items.find((x) => x.e.status === 'envasando');
   const nextT = items.find((x) => x.e.status === 'programado' || x.e.status === 'chegou');
   return { k, now, running, nextT };
+}
+// texto de quando o próximo caminhão entra: "em 2h10", "agora" ou "na fila para envase"
+function whenText(x, now) {
+  if (x.e.status === 'chegou') return 'na fila para envase';
+  const d = x.s - now;
+  return d <= 1 ? 'agora' : 'em ' + untilText(d);
 }
 function nextWindowInfo() {
   const n = new Date();
@@ -489,7 +524,7 @@ function renderHero() {
     const late = lateNoShow(x.e, nt.k);
     chips += late
       ? `<span class="chip warn">${I.alert}${esc(x.e.material)} (${opToHHMM(x.s)}) sem chegada · ${fmtDelta(late)}</span>`
-      : `<span class="chip gold">${I.truck}Próximo caminhão ${opToHHMM(x.s)} · ${esc(x.e.material)} · em ${untilText(x.s - nt.now)}</span>`;
+      : `<span class="chip gold">${I.truck}Próximo caminhão ${opToHHMM(x.s)} · ${esc(x.e.material)} · ${whenText(x, nt.now)}</span>`;
   } else {
     const w = nextWindowInfo();
     if (w) chips += `<span class="chip gold">${I.clock}Próxima janela ${w.s.t}${w.k !== k && !w.s.next ? ' (' + fmtShort(fromKey(w.k)) + ')' : ''} · em ${untilText((w.at - Date.now()) / 60000)}</span>`;
@@ -497,7 +532,7 @@ function renderHero() {
   chips += `<span class="chip">${I.back}Dia anterior de envase: ${fmtShort(prevOpDay(now))}</span>`;
 
   $('#hero').innerHTML = `
-    <div class="hero-crest">${I.crown}</div>
+    <div class="hero-crest">${I.crest}</div>
     <div class="ring" role="img" aria-label="${p.pct}% concluído">
       <svg viewBox="0 0 112 112">
         <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
@@ -507,10 +542,10 @@ function renderHero() {
         <circle class="bg" cx="56" cy="56" r="${R}"/>
         <circle class="fg" cx="56" cy="56" r="${R}" stroke-dasharray="${C}" stroke-dashoffset="${off}"/>
       </svg>
-      <div class="val"><div><b>${p.pct}%</b><small>${p.done} de ${p.total}</small></div></div>
+      <div class="val"><div><b data-count="ring" data-to="${p.pct}" data-suffix="%" class="${p.pct === 100 ? 'full' : ''}">${p.pct}%</b><small>${p.done} de ${p.total}</small></div></div>
     </div>
     <div>
-      <span class="eyebrow">Ordem do dia</span>
+      <span class="eyebrow">${esc(greeting())}</span>
       <h1>${esc(fmtLong(now))}</h1>
       <p class="muted">${p.done === p.total ? 'Sequência do dia concluída. Impecável.' : `Faltam ${p.total - p.done} etapa${p.total - p.done > 1 ? 's' : ''} na sequência de hoje.`}</p>
     </div>
@@ -539,8 +574,8 @@ function renderNextStep() {
         <div class="ns-sub">${tm != null ? `<b>${opToHHMM(tm)}</b> · ` : ''}<b>${esc(e.material)}</b>${e.os ? ' · OS ' + esc(e.os) : ''} — ${fmtShort(fromKey(n.pk))}</div>
       </div>
       <div class="ns-actions">
-        <button class="btn btn-step c-${p.c}" data-prep-one="${p.k}" data-env="${e.id}" data-day="${n.pk}">${I.check} Confirmar neste</button>
-        ${left > 1 ? `<button class="btn btn-step outline c-${p.c}" data-step-all="${p.k}" data-day="${n.pk}">Em todos (${left})</button>` : ''}
+        <button class="btn btn-step c-${p.c}" data-prep-one="${p.k}" data-env="${e.id}" data-day="${n.pk}" title="Atalho: C">${I.check} Confirmar neste</button>
+        ${left > 1 ? `<button class="btn btn-step outline c-${p.c}" data-step-all="${p.k}" data-day="${n.pk}" title="Atalho: E">Em todos (${left})</button>` : ''}
       </div>`;
     return;
   }
@@ -552,7 +587,7 @@ function renderNextStep() {
       <div class="ns-title">${esc(n.title)}</div>
       ${n.sub ? `<div class="ns-sub">${esc(n.sub)}</div>` : ''}
     </div>
-    <div class="ns-actions"><button class="btn btn-primary" data-complete="${esc(n.id)}">${I.check} Concluir</button></div>`;
+    <div class="ns-actions"><button class="btn btn-primary" data-complete="${esc(n.id)}" title="Atalho: C">${I.check} Concluir</button></div>`;
 }
 
 function renderSeq() {
@@ -703,7 +738,7 @@ function renderTodayTrucks() {
   let head = '';
   if (nt && nt.k === k && nt.nextT) {
     const late = lateNoShow(nt.nextT.e, k);
-    head = `<div class="today-next">${I.truck}<span>Próximo: <b>${opToHHMM(nt.nextT.s)}</b></span><span>${esc(nt.nextT.e.material)} · ${late ? `<span class="delay alarm">sem chegada ${fmtDelta(late)}</span>` : 'em ' + untilText(nt.nextT.s - nt.now)}</span></div>`;
+    head = `<div class="today-next">${I.truck}<span>Próximo: <b>${opToHHMM(nt.nextT.s)}</b></span><span>${esc(nt.nextT.e.material)} · ${late ? `<span class="delay alarm">sem chegada ${fmtDelta(late)}</span>` : whenText(nt.nextT, nt.now)}</span></div>`;
   }
   box.innerHTML = head + `<div class="truck-list">${list.map((e) => {
     const p = plannedOp(e), s = startOp(e, k);
@@ -771,6 +806,9 @@ function renderRuler(k) {
   });
   const H = 104 + Math.max(1, lanes.length) * 42;
   let html = '';
+  // faixas dos turnos (cor de cada hora do dia)
+  [{ a: 0, b: 420, c: 'manha', n: 'Manhã' }, { a: 420, b: 810, c: 'tarde', n: 'Tarde' }, { a: 810, b: 1440, c: 'noite', n: 'Noite' }]
+    .forEach((x) => { html += `<div class="r-band b-${x.c}" style="left:${LBL + x.a * sc}px;width:${(x.b - x.a) * sc}px"><span>${x.n}</span></div>`; });
   for (let a = 8 * 60; a < 8 * 60 + 1440; a += 60) {
     const op = a - OP0;
     html += `<div class="r-hour" style="left:${LBL + op * sc}px"><span>${pad((a / 60) % 24)}h</span></div>`;
@@ -859,7 +897,7 @@ function renderAgenda() {
   TURNOS.forEach((tu, ti) => {
     const idxs = SLOTS.map((_, i) => i).filter((i) => SLOTS[i].turno === ti);
     const tFill = idxs.reduce((a, i) => a + L.occ[i].fill, 0);
-    html += `<section class="turno"><div class="turno-head"><h3>${tu.icon}${tu.n}</h3><span>${fmtNum(tFill)}/${idxs.length} janelas</span></div>`;
+    html += `<section class="turno turno-${ti}"><div class="turno-head"><h3>${tu.icon}${tu.n}</h3><span>${fmtNum(tFill)}/${idxs.length} janelas</span></div>`;
     idxs.forEach((i, j) => {
       const s = SLOTS[i];
       const o = L.occ[i];
@@ -905,7 +943,7 @@ function renderCapacity(k, list, L, sch) {
   let freeTxt, freeCls;
   if (free < -1e-9) { freeTxt = `Excedeu em ${fmtNum(-free)} janela${-free > 1 ? 's' : ''}`; freeCls = 'bad'; }
   else if (free < 1 - 1e-9) { freeTxt = free > 1e-9 ? `${fmtNum(free)} janela livre — dia praticamente cheio` : 'Capacidade completa'; freeCls = 'full'; }
-  else { const n = Math.floor(free + 1e-9); freeTxt = `${fmtNum(free)} janelas livres · cabe${n > 1 ? 'm' : ''} +${n} carreta${n > 1 ? 's' : ''} padrão`; freeCls = 'ok'; }
+  else { const n = Math.floor(free + 1e-9); freeTxt = `${fmtNum(free)} ${free > 1 + 1e-9 ? 'janelas livres' : 'janela livre'} · cabe${n > 1 ? 'm' : ''} +${n} carreta${n > 1 ? 's' : ''} padrão`; freeCls = 'ok'; }
   const freeSlots = SLOTS.map((s, i) => ({ s, f: L.occ[i].fill })).filter((x) => x.f < 1 - 1e-9);
 
   const concl = act.filter((e) => e.status === 'concluido').length;
@@ -922,7 +960,7 @@ function renderCapacity(k, list, L, sch) {
 
   $('#capCard').innerHTML = `
     <h3 class="mini-title">${I.gauge}${esc(fmtLong(fromKey(k)))}</h3>
-    <div class="cap-big"><b>${fmtNum(L.used)}</b><span>/ ${CAP} janelas</span></div>
+    <div class="cap-big"><b data-count="cap-${k}" data-to="${L.used}" data-dec="1">${fmtNum(L.used)}</b><span>/ ${CAP} janelas</span></div>
     <div class="cap-seg ${free < -1e-9 ? 'over' : ''}">${segs}</div>
     <div class="cap-free ${freeCls}">${freeTxt}</div>
     <div class="free-slots">${freeSlots.map((x) => `<button class="free-slot" data-add-slot="${x.s.id}" title="Agendar neste horário">${x.s.t}${x.f > 0 ? ' · ½' : ''}</button>`).join('')}<button class="free-slot imp" data-new-imp>${I.alarm}Imprevisto</button></div>
@@ -941,7 +979,7 @@ function renderCapacity(k, list, L, sch) {
 
 function renderLegend() {
   $('#legend').innerHTML = Object.entries(TYPES).map(([k, t]) => `
-    <li><span class="mono">${t.mono}</span><div>${esc(t.n)}<small>${esc(t.leg)}</small></div><b>${t.w === 'turno' ? 'turno' : fmtNum(t.w) + ' jan.'}</b></li>`).join('') +
+    <li><span class="tico">${I[t.ic]}</span><div>${esc(t.n)}<small>${esc(t.leg)}</small></div><b>${t.w === 'turno' ? 'turno' : fmtNum(t.w) + ' jan.'}</b></li>`).join('') +
     `<li style="grid-template-columns:1fr"><small class="muted">Atrasos reais de chegada e de envase são tratados em <b>Ajustar horário</b> — os seguintes podem ser empurrados automaticamente.</small></li>`;
 }
 
@@ -957,7 +995,7 @@ function renderPreparo() {
 
   $('#prepSummary').innerHTML = `
     <div class="ps-top">
-      <div class="ps-big"><b>${done}</b><span>/ ${total} etapas</span><small>${ready} de ${list.length} ${list.length === 1 ? 'caminhão' : 'caminhões'} pronto${ready === 1 ? '' : 's'} · ${esc(fmtLong(fromKey(k)))}</small></div>
+      <div class="ps-big"><b data-count="prep-${k}" data-to="${done}">${done}</b><span>/ ${total} etapas</span><small>${ready} de ${list.length} ${list.length === 1 ? 'caminhão' : 'caminhões'} pronto${ready === 1 ? '' : 's'} · ${esc(fmtLong(fromKey(k)))}</small></div>
       <div class="seg" role="tablist">
         <button data-prep-mode="truck" class="${mode === 'truck' ? 'active' : ''}">Por caminhão (1 a 1)</button>
         <button data-prep-mode="step" class="${mode === 'step' ? 'active' : ''}">Por etapa (todos)</button>
@@ -1057,7 +1095,7 @@ function renderHistory() {
 
   $('#history').innerHTML = `
     <div class="hist-cards">
-      <div class="stat"><small>Média de conclusão</small><b>${avg}%</b></div>
+      <div class="stat"><small>Média de conclusão</small><b data-count="hist-avg" data-to="${avg}" data-suffix="%">${avg}%</b></div>
       <div class="stat"><small>Dias 100%</small><b>${withData.filter((r) => r.p.pct === 100).length}</b></div>
       <div class="stat"><small>Caminhões</small><b>${envTotal}</b></div>
       <div class="stat"><small>Atraso médio na chegada</small><b>${avgDelay != null ? fmtDelta(avgDelay) : '—'}</b></div>
@@ -1081,6 +1119,59 @@ function renderHistory() {
     </section>`;
 }
 
+/* ================= Microanimações ================= */
+function pop(el) {
+  if (!el) return;
+  el.classList.add('pop');
+  el.closest('.task')?.classList.add('shine');
+}
+// números sobem contando até o valor novo
+const countCache = {};
+function animateCounts() {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  $$('[data-count]').forEach((el) => {
+    const key = el.dataset.count, to = Number(el.dataset.to), dec = Number(el.dataset.dec || 0), suf = el.dataset.suffix || '';
+    const from = countCache[key] ?? 0;
+    countCache[key] = to;
+    if (reduce || from === to) return;
+    const fmt = (v) => (dec ? (Math.round(v * 10) / 10).toLocaleString('pt-BR') : Math.round(v).toLocaleString('pt-BR')) + suf;
+    const t0 = performance.now(), dur = 650;
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      el.textContent = fmt(from + (to - from) * e);
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+}
+// celebração quando a sequência do dia chega a 100%
+let lastPct = null, lastPctKey = null;
+function checkCelebrate() {
+  const k = todayKey();
+  if (k !== lastPctKey) { lastPctKey = k; lastPct = null; }
+  const p = dayProgress(k).pct;
+  if (lastPct !== null && lastPct < 100 && p === 100) celebrate();
+  lastPct = p;
+}
+function celebrate() {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  $('.celebrate')?.remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'celebrate';
+  if (!reduce) {
+    for (let i = 0; i < 80; i++) {
+      const p = document.createElement('i');
+      const size = 5 + Math.random() * 8;
+      p.style.cssText = `left:${Math.random() * 100}%;width:${size}px;height:${size}px;animation-delay:${Math.random() * 0.9}s;animation-duration:${2.3 + Math.random() * 1.7}s;--x:${Math.random() * 140 - 70}px;--r:${Math.random() * 900 - 450}deg`;
+      wrap.appendChild(p);
+    }
+  }
+  wrap.insertAdjacentHTML('beforeend', `<div class="seal">${I.crown}<b>Dia concluído</b><small>Sequência Filling 100%</small></div>`);
+  document.body.appendChild(wrap);
+  wrap.querySelector('.seal').addEventListener('click', () => wrap.remove());
+  setTimeout(() => wrap.remove(), 4300);
+}
+
 /* ================= Render principal ================= */
 function renderClock() { const n = new Date(); $('#clock').textContent = `${pad(n.getHours())}:${pad(n.getMinutes())}`; }
 function render() {
@@ -1089,6 +1180,8 @@ function render() {
   if (currentTab === 'agenda') renderAgenda();
   if (currentTab === 'preparo') renderPreparo();
   if (currentTab === 'historico') renderHistory();
+  animateCounts();
+  checkCelebrate();
 }
 
 /* ================= Ciclo do caminhão ================= */
@@ -1102,6 +1195,7 @@ function advance(k, id) {
   e.status = f.next;
   save(); render();
   const undo = () => { e.status = prev.status; e.t = prev.t; save(); render(); };
+  lastUndo = undo;
   const p = plannedOp(e);
   if (f.t === 'chegada' && p != null) {
     const target = e.ajuste ?? p;
@@ -1394,12 +1488,12 @@ document.addEventListener('click', (ev) => {
 
   if ((el = c('[data-complete]'))) {
     toggleCheck(el.dataset.complete, true); render();
-    $(`.medal[data-toggle="${el.dataset.complete}"]`)?.classList.add('pop');
+    pop($(`.medal[data-toggle="${el.dataset.complete}"]`));
     return;
   }
   if ((el = c('[data-toggle]'))) {
     toggleCheck(el.dataset.toggle); render();
-    $(`.medal[data-toggle="${el.dataset.toggle}"]`)?.classList.add('pop');
+    pop($(`.medal[data-toggle="${el.dataset.toggle}"]`));
     return;
   }
   if ((el = c('[data-sub]'))) {
@@ -1407,7 +1501,7 @@ document.addEventListener('click', (ev) => {
     const st = subState(todayKey(), sub);
     if (st.derived) setStepAll(progDayOf(todayKey()), sub.prep, !st.done);
     else { toggleCheck(sub.id); render(); }
-    $(`.medal[data-sub="${sub.id}"]`)?.classList.add('pop');
+    pop($(`.medal[data-sub="${sub.id}"]`));
     return;
   }
   if ((el = c('[data-toggle-parent]'))) {
@@ -1436,7 +1530,7 @@ document.addEventListener('click', (ev) => {
     const st = (day.routine[el.dataset.rotToggle] ||= {});
     st.at = st.at ? null : Date.now();
     save(); render();
-    $(`.check[data-rot-toggle="${el.dataset.rotToggle}"]`)?.classList.add('pop');
+    pop($(`.check[data-rot-toggle="${el.dataset.rotToggle}"]`));
     return;
   }
   if ((el = c('[data-rot-note-open]'))) {
@@ -1491,7 +1585,11 @@ document.addEventListener('click', (ev) => {
   if ((el = c('[data-add-slot]'))) return openEnv(agDay, null, el.dataset.addSlot || undefined);
   if (c('[data-new-truck]')) return openEnv(currentTab === 'preparo' ? prDay : agDay);
   if (c('[data-close]')) { c('dialog')?.close(); return; }
-  if ((el = c('[data-theme-set]'))) { S.settings.theme = el.dataset.themeSet; save(); applyTheme(); return; }
+  if ((el = c('[data-theme-set]'))) { S.settings.theme = el.dataset.themeSet; save(); applyTheme(); lastRulerDay = null; return; }
+  if ((el = c('[data-accent-set]'))) { S.settings.accent = el.dataset.accentSet; save(); applyTheme(); return; }
+  if ((el = c('[data-density-set]'))) { S.settings.density = el.dataset.densitySet; save(); applyTheme(); return; }
+  if ((el = c('[data-font-set]'))) { S.settings.font = el.dataset.fontSet; save(); applyTheme(); lastRulerDay = null; if (currentTab === 'agenda') render(); return; }
+  if (c('[data-open-keys]')) { $$('dialog[open]').forEach((d) => d.close()); $('#keysDlg').showModal(); return; }
   if (c('select, input, textarea, label')) return;
   if ((el = c('[data-edit]'))) {
     openEnv(el.dataset.day, el.dataset.edit);
@@ -1575,10 +1673,15 @@ $('#envDuplicate').addEventListener('click', () => {
 $$('dialog').forEach((d) => d.addEventListener('click', (ev) => { if (ev.target === d) d.close(); }));
 
 $('#settingsBtn').addEventListener('click', () => { applyTheme(); $('#setDlg').showModal(); });
-$('#themeBtn').addEventListener('click', () => {
-  S.settings.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-  save(); applyTheme();
-});
+$('#themeBtn').addEventListener('click', toggleTheme);
+function toggleTheme() {
+  const st = S.settings;
+  if (document.documentElement.dataset.mode === 'dark') { st.lastDark = !st.theme || st.theme === 'auto' || st.theme === 'light' ? 'dark' : st.theme; st.theme = 'light'; }
+  else st.theme = st.lastDark || 'dark';
+  save(); applyTheme(); toast(`Tema: ${THEME_NAMES[st.theme]}`);
+}
+const THEME_NAMES = { auto: 'Automático', dark: 'Noite Real', light: 'Pergaminho', crimson: 'Carmesim Imperial', knight: 'Cavaleiro Negro' };
+$('#nameInput').addEventListener('change', (ev) => { S.settings.name = ev.target.value.trim().slice(0, 30); save(); render(); });
 $('#exportBtn').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -1636,6 +1739,49 @@ setInterval(() => {
 }, 30000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
 
+/* ================= Atalhos de teclado ================= */
+function shiftOpDay(k, dir) { let d = fromKey(k); do { d = addDays(d, dir); } while (!isOpDay(d)); return keyOf(d); }
+function focusTruck() {
+  const nt = nextTruckInfo();
+  const x = nt && (nt.running || nt.nextT);
+  return x ? { k: nt.k, e: x.e } : null;
+}
+document.addEventListener('keydown', (ev) => {
+  const t = ev.target;
+  const typing = t.matches?.('input, textarea, select') || t.isContentEditable;
+  const openDlg = document.querySelector('dialog[open]');
+  // Ctrl+Enter salva o diálogo aberto
+  if ((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter' && openDlg) {
+    ev.preventDefault();
+    if (openDlg.id === 'envDlg') form.requestSubmit();
+    if (openDlg.id === 'adjDlg') { adj.detail = $('#adjDetail').value; saveAdjust(); }
+    return;
+  }
+  if (typing || ev.ctrlKey || ev.metaKey || ev.altKey || openDlg) return;
+  const key = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
+  const go = { 1: 'hoje', 2: 'agenda', 3: 'preparo', 4: 'historico' }[key];
+  if (go) { ev.preventDefault(); setTab(go); return; }
+  const act = {
+    n: () => { if (!['agenda', 'preparo'].includes(currentTab)) setTab('agenda'); openEnv(currentTab === 'preparo' ? prDay : agDay); },
+    i: () => { if (!['agenda', 'preparo'].includes(currentTab)) setTab('agenda'); openEnv(currentTab === 'preparo' ? prDay : agDay, null, '__imp'); },
+    c: () => { if (currentTab !== 'hoje') setTab('hoje'); const b = $('#nextStep [data-complete], #nextStep [data-prep-one]'); b ? b.click() : toast('Sequência já concluída'); },
+    e: () => { if (currentTab !== 'hoje') setTab('hoje'); const b = $('#nextStep [data-step-all]'); b ? b.click() : toast('Nada para confirmar em todos agora'); },
+    r: () => { const f = focusTruck(); f ? advance(f.k, f.e.id) : toast('Nenhum caminhão pendente hoje'); },
+    a: () => { const f = focusTruck(); f ? openAdjust(f.k, f.e.id) : toast('Nenhum caminhão para ajustar hoje'); },
+    ArrowLeft: () => { if (currentTab === 'agenda') { agDay = shiftOpDay(agDay, -1); render(); } else if (currentTab === 'preparo') { prDay = shiftOpDay(prDay, -1); openTrucks.clear(); render(); } },
+    ArrowRight: () => { if (currentTab === 'agenda') { agDay = shiftOpDay(agDay, 1); render(); } else if (currentTab === 'preparo') { prDay = shiftOpDay(prDay, 1); openTrucks.clear(); render(); } },
+    h: () => { const k = currentOpDayKey() || keyOf(nextOpDay(new Date())); if (currentTab === 'preparo') { prDay = keyOf(nextOpDay(new Date())); openTrucks.clear(); } else { agDay = k; if (currentTab !== 'agenda') setTab('agenda'); } render(); },
+    t: () => toggleTheme(),
+    ',': () => { applyTheme(); $('#setDlg').showModal(); },
+    z: () => {
+      if (!lastUndo) return toast('Nada para desfazer');
+      const fn = lastUndo; lastUndo = null; $('#toast').classList.remove('show'); fn(); toast('Desfeito');
+    },
+    '?': () => $('#keysDlg').showModal(),
+  }[key];
+  if (act) { ev.preventDefault(); act(); }
+});
+
 /* ================= Proteção contra erros ================= */
 let lastErr = 0;
 function showError(err) {
@@ -1648,6 +1794,7 @@ window.addEventListener('error', (ev) => showError(ev.error || ev.message));
 window.addEventListener('unhandledrejection', (ev) => showError(ev.reason));
 
 /* ================= Início ================= */
+if (document.documentElement.classList.contains('is-splash')) setTimeout(() => document.documentElement.classList.remove('is-splash'), 1700);
 $$('[data-ic]').forEach((el) => { el.innerHTML = I[el.dataset.ic] || ''; });
 fillSelects();
 renderLegend();

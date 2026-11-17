@@ -8,6 +8,14 @@ Checklist diária da sequência Filling, agenda de caminhões por horário e pre
 - **Histórico** — conclusão da sequência e atraso médio de chegada.
 Funciona no PC e no celular, salva tudo no próprio navegador e funciona offline.
 
+## Atalhos do teclado (PC)
+
+`1`–`4` abas · `←` `→` dia anterior/próximo · `H` hoje · `C` concluir próximo passo · `E` confirmar etapa em todos · `N` novo caminhão · `I` horário imprevisto · `R` chegada/iniciar/finalizar o próximo · `A` ajustar horário · `Z` desfazer · `T` tema · `,` configurações · `Ctrl+Enter` salvar · `?` ajuda
+
+## Aparência
+
+Em ⚙️ Configurações: temas *Noite Real*, *Pergaminho*, *Carmesim Imperial* e *Cavaleiro Negro*, cor de destaque (ouro, prata, rubi, ametista), densidade compacta, tamanho da letra e seu nome na saudação.
+
 ## Publicar no GitHub Pages
 
 1. Crie um repositório novo no GitHub (ex.: `filling-painel`).

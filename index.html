@@ -14,17 +14,31 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
   <script>
-    try {
-      var s = JSON.parse(localStorage.getItem('filling-painel-v1') || '{}');
-      var t = (s.settings && s.settings.theme) || 'dark';
+    // aplica tema e preferências antes de desenhar (evita "piscar")
+    (function () {
+      var r = document.documentElement, st = {};
+      try { st = (JSON.parse(localStorage.getItem('filling-painel-v1') || '{}').settings) || {}; } catch (e) {}
+      var t = st.theme || 'dark';
       if (t === 'auto') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-      document.documentElement.dataset.theme = t;
-    } catch (e) { document.documentElement.dataset.theme = 'dark'; }
+      r.dataset.theme = t;
+      r.dataset.mode = t === 'light' ? 'light' : 'dark';
+      r.dataset.accent = !st.accent || st.accent === 'auto' ? (t === 'knight' ? 'silver' : 'gold') : st.accent;
+      r.dataset.density = st.density || 'comfort';
+      r.dataset.font = st.font || 'M';
+      if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) r.classList.add('is-splash');
+    })();
   </script>
 </head>
 <body>
+  <div class="splash" aria-hidden="true">
+    <div class="splash-crest">
+      <img src="icons/icon.svg" width="120" height="120" alt="">
+      <strong>Filling</strong>
+      <span>Painel Real de Envase</span>
+    </div>
+  </div>
   <header class="topbar">
     <div class="brand">
       <img src="icons/icon.svg" alt="" width="38" height="38">
@@ -43,6 +57,7 @@
 
     <div class="top-actions">
       <div class="clock" id="clock" aria-live="polite"></div>
+      <button class="icon-btn hide-mobile" data-open-keys title="Atalhos do teclado (?)" aria-label="Atalhos do teclado"><span data-ic="keyboard"></span></button>
       <button class="icon-btn" id="themeBtn" title="Alternar tema" aria-label="Alternar tema"><span data-ic="moon"></span>
       </button>
       <button class="icon-btn" id="settingsBtn" title="Configurações e backup" aria-label="Configurações"><span data-ic="gear"></span>
@@ -326,13 +341,45 @@
       </button>
     </div>
     <div class="settings">
-      <div class="set-row">
-        <div><strong>Tema</strong><p class="muted">Noite real (escuro), pergaminho (claro) ou igual ao sistema</p></div>
-        <div class="seg" id="themeSeg">
-          <button data-theme-set="auto">Auto</button>
-          <button data-theme-set="dark">Escuro</button>
-          <button data-theme-set="light">Claro</button>
+      <div class="set-block">
+        <strong><span data-ic="palette"></span>Tema</strong>
+        <div class="theme-grid">
+          <button data-theme-set="dark" class="theme-opt"><i style="--a:#120c1a;--b:#d8b45c;--c2:#3a1f63"></i>Noite Real</button>
+          <button data-theme-set="light" class="theme-opt"><i style="--a:#fffcf5;--b:#a47d22;--c2:#ece2cf"></i>Pergaminho</button>
+          <button data-theme-set="crimson" class="theme-opt"><i style="--a:#170a0e;--b:#d8b45c;--c2:#5c0f22"></i>Carmesim Imperial</button>
+          <button data-theme-set="knight" class="theme-opt"><i style="--a:#101113;--b:#c3c9d4;--c2:#2a2e38"></i>Cavaleiro Negro</button>
+          <button data-theme-set="auto" class="theme-opt"><i style="--a:#120c1a;--b:#fffcf5;--c2:#a47d22"></i>Automático</button>
         </div>
+      </div>
+      <div class="set-block">
+        <strong>Cor de destaque</strong>
+        <div class="accent-row">
+          <button data-accent-set="auto" class="accent-opt" title="Padrão do tema"><i class="sw-auto"></i>Padrão</button>
+          <button data-accent-set="gold" class="accent-opt"><i style="--s:#d8b45c"></i>Ouro</button>
+          <button data-accent-set="silver" class="accent-opt"><i style="--s:#c3c9d4"></i>Prata</button>
+          <button data-accent-set="ruby" class="accent-opt"><i style="--s:#e8667c"></i>Rubi</button>
+          <button data-accent-set="amethyst" class="accent-opt"><i style="--s:#b38cf7"></i>Ametista</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <div><strong>Densidade</strong><p class="muted">Compacto mostra mais caminhões por tela</p></div>
+        <div class="seg">
+          <button data-density-set="comfort">Confortável</button>
+          <button data-density-set="compact">Compacto</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <div><strong>Tamanho da letra</strong><p class="muted">Vale para o site todo</p></div>
+        <div class="seg font-seg">
+          <button data-font-set="S" style="font-size:12px">A</button>
+          <button data-font-set="M" style="font-size:14px">A</button>
+          <button data-font-set="L" style="font-size:16px">A</button>
+          <button data-font-set="XL" style="font-size:18px">A</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <div><strong>Seu nome</strong><p class="muted">Para a saudação da tela Hoje</p></div>
+        <input type="text" id="nameInput" maxlength="30" placeholder="Ex.: Lelouch" class="name-input">
       </div>
       <div class="set-row">
         <div><strong>Backup</strong><p class="muted">Os dados ficam salvos neste navegador. Exporte para levar a outro aparelho.</p></div>
@@ -340,6 +387,10 @@
           <button class="btn btn-ghost" id="exportBtn">Exportar</button>
           <label class="btn btn-ghost">Importar<input type="file" id="importInput" accept="application/json,.json" hidden></label>
         </div>
+      </div>
+      <div class="set-row hide-mobile">
+        <div><strong>Atalhos do teclado</strong><p class="muted">Pressione <kbd>?</kbd> a qualquer momento</p></div>
+        <button class="btn btn-ghost" data-open-keys><span data-ic="keyboard"></span>Ver atalhos</button>
       </div>
       <div class="set-row">
         <div><strong>Reiniciar o dia</strong><p class="muted">Desmarca a sequência e a rotina de hoje</p></div>
@@ -353,8 +404,44 @@
     </div>
   </dialog>
 
+  <!-- ================= DIÁLOGO: ATALHOS ================= -->
+  <dialog id="keysDlg" class="sheet keys-sheet">
+    <div class="sheet-head">
+      <div>
+        <span class="eyebrow">Teclado</span>
+        <h2>Atalhos</h2>
+      </div>
+      <button type="button" class="icon-btn" data-close aria-label="Fechar"><span data-ic="x"></span></button>
+    </div>
+    <div class="keys">
+      <div class="keys-col">
+        <h4>Navegar</h4>
+        <p><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd><span>Hoje · Agenda · Preparo · Histórico</span></p>
+        <p><kbd>←</kbd><kbd>→</kbd><span>Dia anterior / próximo (Agenda e Preparo)</span></p>
+        <p><kbd>H</kbd><span>Voltar para o dia de hoje</span></p>
+        <h4>Sequência</h4>
+        <p><kbd>C</kbd><span>Concluir o próximo passo</span></p>
+        <p><kbd>E</kbd><span>Confirmar a etapa em todos os caminhões</span></p>
+        <p><kbd>Z</kbd><span>Desfazer a última ação</span></p>
+      </div>
+      <div class="keys-col">
+        <h4>Caminhões</h4>
+        <p><kbd>N</kbd><span>Novo caminhão</span></p>
+        <p><kbd>I</kbd><span>Novo horário imprevisto</span></p>
+        <p><kbd>R</kbd><span>Registrar chegada / iniciar / finalizar o próximo</span></p>
+        <p><kbd>A</kbd><span>Ajustar horário do próximo caminhão</span></p>
+        <h4>Geral</h4>
+        <p><kbd>T</kbd><span>Alternar tema claro / escuro</span></p>
+        <p><kbd>,</kbd><span>Configurações</span></p>
+        <p><kbd>Ctrl</kbd><kbd>Enter</kbd><span>Salvar a janela aberta</span></p>
+        <p><kbd>Esc</kbd><span>Fechar a janela</span></p>
+        <p><kbd>?</kbd><span>Mostrar estes atalhos</span></p>
+      </div>
+    </div>
+  </dialog>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>
