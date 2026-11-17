@@ -35,19 +35,17 @@
     </div>
 
     <nav class="tabs" aria-label="Seções">
-      <button class="tab-btn" data-tab="hoje">Hoje</button>
-      <button class="tab-btn" data-tab="agenda">Agenda</button>
-      <button class="tab-btn" data-tab="preparo">Preparo</button>
-      <button class="tab-btn" data-tab="historico">Histórico</button>
+      <button class="tab-btn" data-tab="hoje"><span data-ic="scroll"></span>Hoje</button>
+      <button class="tab-btn" data-tab="agenda"><span data-ic="clock"></span>Agenda</button>
+      <button class="tab-btn" data-tab="preparo"><span data-ic="clipboard"></span>Preparo</button>
+      <button class="tab-btn" data-tab="historico"><span data-ic="chart"></span>Histórico</button>
     </nav>
 
     <div class="top-actions">
       <div class="clock" id="clock" aria-live="polite"></div>
-      <button class="icon-btn" id="themeBtn" title="Alternar tema" aria-label="Alternar tema">
-        <svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <button class="icon-btn" id="themeBtn" title="Alternar tema" aria-label="Alternar tema"><span data-ic="moon"></span>
       </button>
-      <button class="icon-btn" id="settingsBtn" title="Configurações e backup" aria-label="Configurações">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      <button class="icon-btn" id="settingsBtn" title="Configurações e backup" aria-label="Configurações"><span data-ic="gear"></span>
       </button>
     </div>
   </header>
@@ -63,7 +61,7 @@
           <section class="card">
             <div class="card-head">
               <div>
-                <h2>Sequência Filling</h2>
+                <h2><span class="h-ico" data-ic="scroll"></span>Sequência Filling</h2>
                 <p class="muted" id="seqSub"></p>
               </div>
               <span class="pill" id="seqCount"></span>
@@ -80,7 +78,7 @@
           <section class="card">
             <div class="card-head">
               <div>
-                <h2>Caminhões de hoje</h2>
+                <h2><span class="h-ico" data-ic="truck"></span>Caminhões de hoje</h2>
                 <p class="muted" id="todaySub">Chegada, envase e ajustes de horário</p>
               </div>
               <button class="btn btn-ghost btn-sm" data-goto="agenda" data-day="today">Agenda</button>
@@ -91,7 +89,7 @@
           <section class="card">
             <div class="card-head">
               <div>
-                <h2>Rotina e demandas</h2>
+                <h2><span class="h-ico" data-ic="repeat"></span>Rotina e demandas</h2>
                 <p class="muted">Diárias e conforme demanda</p>
               </div>
               <span class="pill" id="rotCount"></span>
@@ -102,7 +100,7 @@
           <section class="card">
             <div class="card-head">
               <div>
-                <h2>Anotações do dia</h2>
+                <h2><span class="h-ico" data-ic="feather"></span>Anotações do dia</h2>
                 <p class="muted">Pendências, ocorrências, lembretes</p>
               </div>
               <span class="saved muted" id="notesSaved"></span>
@@ -121,9 +119,10 @@
           <h1 class="title">Horários do dia</h1>
           <p class="muted">Operação: segunda 07:15 → sábado 07:15 · 3 turnos · até 7 janelas</p>
         </div>
-        <button class="btn btn-primary hide-mobile" data-new-truck>
-          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Novo caminhão
-        </button>
+        <div class="top-btns hide-mobile">
+          <button class="btn btn-ghost" data-new-imp><span data-ic="alarm"></span>Horário imprevisto</button>
+          <button class="btn btn-primary" data-new-truck><span data-ic="plus"></span>Novo caminhão</button>
+        </div>
       </div>
 
       <div class="day-picker" id="agDays"></div>
@@ -132,7 +131,7 @@
       <section class="card ruler-card">
         <div class="card-head">
           <div>
-            <h2>Régua do dia</h2>
+            <h2><span class="h-ico" data-ic="ruler"></span>Régua do dia</h2>
             <p class="muted">Faixa de cima: previsto · faixa de baixo: real / ajustado</p>
           </div>
           <div class="ruler-legend">
@@ -152,7 +151,7 @@
         <aside class="col">
           <section class="card" id="capCard"></section>
           <section class="card legend-card">
-            <h3 class="mini-title">Peso de cada tipo de envase</h3>
+            <h3 class="mini-title"><span data-ic="layers"></span>Peso de cada tipo de envase</h3>
             <ul class="legend" id="legend"></ul>
           </section>
         </aside>
@@ -186,25 +185,24 @@
     </section>
   </main>
 
-  <button class="fab" id="fab" data-new-truck aria-label="Novo caminhão" hidden>
-    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+  <button class="fab" id="fab" data-new-truck aria-label="Novo caminhão" hidden><span data-ic="plus"></span>
   </button>
 
   <nav class="bottom-nav" aria-label="Seções">
     <button class="tab-btn" data-tab="hoje">
-      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span data-ic="scroll"></span>
       <span>Hoje</span>
     </button>
     <button class="tab-btn" data-tab="agenda">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <span data-ic="clock"></span>
       <span>Agenda</span>
     </button>
     <button class="tab-btn" data-tab="preparo">
-      <svg viewBox="0 0 24 24"><path d="M3 17h2l1-9h12l1 9h2"/><circle cx="7.5" cy="18.5" r="1.5"/><circle cx="16.5" cy="18.5" r="1.5"/><path d="M9 8V5h6v3"/></svg>
+      <span data-ic="clipboard"></span>
       <span>Preparo</span>
     </button>
     <button class="tab-btn" data-tab="historico">
-      <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16v-5M12 16V8M17 16v-3"/></svg>
+      <span data-ic="chart"></span>
       <span>Histórico</span>
     </button>
   </nav>
@@ -218,7 +216,7 @@
           <h2 id="envDlgTitle">Novo caminhão</h2>
         </div>
         <button type="button" class="icon-btn" data-close aria-label="Fechar">
-          <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          <span data-ic="x"></span>
         </button>
       </div>
       <div class="form-grid">
@@ -229,14 +227,24 @@
         <label>Tipo de envase
           <select name="tipo"></select>
         </label>
-        <label>Janela
+        <label>Status
+          <select name="status"></select>
+        </label>
+        <div class="span-2 field">
+          <span class="fl">Horário de chegada</span>
+          <div class="seg seg-full" id="horaSeg">
+            <button type="button" data-hora-mode="janela"><span data-ic="clock"></span>Janela da lista</button>
+            <button type="button" data-hora-mode="imprevisto"><span data-ic="alarm"></span>Horário imprevisto</button>
+          </div>
+        </div>
+        <label id="slotWrap">Janela
           <select name="slot"></select>
+        </label>
+        <label id="horaWrap" hidden>Horário imprevisto
+          <input type="time" name="hora">
         </label>
         <label>Dia
           <input type="date" name="dia" required>
-        </label>
-        <label>Status
-          <select name="status"></select>
         </label>
         <label>Janelas ocupadas
           <select name="janelas">
@@ -263,11 +271,20 @@
             <option value="8">8 h</option>
           </select>
         </label>
-        <label>Cliente / destino
-          <input name="cliente" maxlength="60">
+        <label>Reprocesso (quantidade)
+          <span class="input-unit">
+            <input name="repQtd" type="text" inputmode="decimal" maxlength="12" placeholder="0">
+            <select name="repUn">
+              <option value="kg">kg</option>
+              <option value="L">L</option>
+              <option value="t">t</option>
+              <option value="IBC">IBC</option>
+              <option value="tambor">tambor</option>
+            </select>
+          </span>
         </label>
-        <label>Placa / transportadora
-          <input name="placa" maxlength="40">
+        <label>Ordem de serviço
+          <input name="os" maxlength="40" placeholder="Nº da OS">
         </label>
         <label class="span-2">OP / lote
           <input name="op" maxlength="40">
@@ -295,7 +312,7 @@
         <h2 id="adjTitle"></h2>
       </div>
       <button type="button" class="icon-btn" data-close aria-label="Fechar">
-        <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        <span data-ic="x"></span>
       </button>
     </div>
     <div class="adj" id="adjBody"></div>
@@ -309,7 +326,7 @@
         <h2>Configurações</h2>
       </div>
       <button type="button" class="icon-btn" data-close aria-label="Fechar">
-        <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        <span data-ic="x"></span>
       </button>
     </div>
     <div class="settings">

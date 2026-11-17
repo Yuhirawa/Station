@@ -11,35 +11,60 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 const fmtNum = (n) => (Math.round(n * 10) / 10).toLocaleString('pt-BR');
 
 const STORE_KEY = 'filling-painel-v1';
+const sv = (inner) => `<svg viewBox="0 0 24 24">${inner}</svg>`;
+// ícones de traço com preenchimento suave (classe .d = camada translúcida)
 const I = {
-  check: '<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>',
-  x: '<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>',
-  plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
-  alert: '<svg viewBox="0 0 24 24"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg>',
-  clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
-  truck: '<svg viewBox="0 0 24 24"><path d="M1 4h14v12H1zM15 9h4l4 4v3h-8"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/></svg>',
-  play: '<svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg>',
-  flag: '<svg viewBox="0 0 24 24"><path d="M4 22V4M4 4h13l-2 4 2 4H4"/></svg>',
-  arrow: '<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
-  edit: '<svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
-  chev: '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>',
-  back: '<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>',
-  crown: '<svg viewBox="0 0 24 24"><path d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 11H5z"/><path d="M5 21h14"/></svg>',
+  check: sv('<path d="M20 6L9 17l-5-5"/>'),
+  x: sv('<path d="M18 6L6 18M6 6l12 12"/>'),
+  plus: sv('<path d="M12 5v14M5 12h14"/>'),
+  alert: sv('<path class="d" d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/>'),
+  clock: sv('<circle class="d" cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/>'),
+  alarm: sv('<circle class="d" cx="12" cy="13" r="8"/><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.6 1.8M4.5 3.5L2 6M19.5 3.5L22 6M7 20l-1.5 2M17 20l1.5 2"/>'),
+  truck: sv('<path class="d" d="M2 5.5h12v10.5H2z"/><path d="M2 5.5h12v10.5H2zM14 9h4.3l3.7 3.8V16h-8"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>'),
+  play: sv('<circle class="d" cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="9"/><path d="M10 8.3l5.5 3.7-5.5 3.7z"/>'),
+  flag: sv('<path class="d" d="M5 4h13l-2.5 4.5L18 13H5z"/><path d="M5 21V4h13l-2.5 4.5L18 13H5"/>'),
+  arrow: sv('<path d="M5 12h14M13 6l6 6-6 6"/>'),
+  edit: sv('<path class="d" d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4zM14 6l3 3M13 20h8"/>'),
+  chev: sv('<path d="M6 9l6 6 6-6"/>'),
+  back: sv('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>'),
+  crown: sv('<path class="d" d="M3 8l4.5 3.5L12 5l4.5 6.5L21 8l-2 10H5z"/><path d="M3 8l4.5 3.5L12 5l4.5 6.5L21 8l-2 10H5zM5 21h14"/>'),
+  clipboard: sv('<rect class="d" x="5" y="4" width="14" height="17" rx="2.5"/><rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 2.8h6v2.6H9zM9 11l2 2 4-4M9 17h6"/>'),
+  calCheck: sv('<rect class="d" x="3" y="5" width="18" height="16" rx="2.5"/><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M8 3v4M16 3v4M3 10h18M9 15.2l2 2 4-4"/>'),
+  printer: sv('<path class="d" d="M3.5 9h17a1.5 1.5 0 0 1 1.5 1.5V17h-4v-3H6v3H2v-6.5A1.5 1.5 0 0 1 3.5 9z"/><path d="M6 9V3h12v6M6 17H2v-6.5A1.5 1.5 0 0 1 3.5 9h17a1.5 1.5 0 0 1 1.5 1.5V17h-4M6 14h12v7H6zM17.5 12h.01"/>'),
+  package: sv('<path class="d" d="M12 2.5l8.5 4.7v9.6L12 21.5l-8.5-4.7V7.2z"/><path d="M12 2.5l8.5 4.7v9.6L12 21.5l-8.5-4.7V7.2zM3.5 7.2L12 12l8.5-4.8M12 12v9.5M7.8 4.8l8.5 4.8"/>'),
+  barcode: sv('<rect class="d" x="2" y="4" width="20" height="16" rx="2.5"/><path d="M2 8V6.5A2.5 2.5 0 0 1 4.5 4H6M18 4h1.5A2.5 2.5 0 0 1 22 6.5V8M22 16v1.5a2.5 2.5 0 0 1-2.5 2.5H18M6 20H4.5A2.5 2.5 0 0 1 2 17.5V16M7 8v8M10 8v8M13 8v8M15.5 8v8M17.5 8v8"/>'),
+  calClock: sv('<path class="d" d="M3 7.5A2.5 2.5 0 0 1 5.5 5h13A2.5 2.5 0 0 1 21 7.5V10H3z"/><path d="M11 21H5.5A2.5 2.5 0 0 1 3 18.5v-11A2.5 2.5 0 0 1 5.5 5h13A2.5 2.5 0 0 1 21 7.5V11M8 3v4M16 3v4M3 10h18"/><circle cx="17" cy="17" r="4.5"/><path d="M17 15v2l1.4 1"/>'),
+  phone: sv('<rect class="d" x="6" y="2" width="12" height="20" rx="3"/><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10.5 18.5h3M9 6h6M9 9.5h6M9 13h3"/>'),
+  recycle: sv('<circle class="d" cx="12" cy="12" r="9"/><path d="M20 12a8 8 0 0 1-14.2 5M4 12a8 8 0 0 1 14.2-5"/><path d="M18.5 3v4.2h-4.2M5.5 21v-4.2h4.2"/>'),
+  file: sv('<path class="d" d="M6 2.5h8l5 5V21a.5.5 0 0 1-.5.5h-12A.5.5 0 0 1 6 21z"/><path d="M6.5 21.5h12a.5.5 0 0 0 .5-.5V7.5l-5-5H6.5a.5.5 0 0 0-.5.5v18a.5.5 0 0 0 .5.5zM14 2.5v5h5M9 12.5h7M9 16.5h5"/>'),
+  hash: sv('<path d="M5 9h15M4 15h15M10 3.5L8.5 20.5M15.5 3.5L14 20.5"/>'),
+  sun: sv('<circle class="d" cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.2M12 19.8V22M4.9 4.9l1.5 1.5M17.6 17.6l1.5 1.5M2 12h2.2M19.8 12H22M4.9 19.1l1.5-1.5M17.6 6.4l1.5-1.5"/>'),
+  sunset: sv('<path class="d" d="M6.5 17a5.5 5.5 0 0 1 11 0z"/><path d="M6.5 17a5.5 5.5 0 0 1 11 0M2 17h20M6 21h12M12 2.5v6M9.2 5.8L12 8.5l2.8-2.7M4.2 10.2l1.5 1.5M19.8 10.2l-1.5 1.5"/>'),
+  moon: sv('<path class="d" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/><path d="M17 3.5v3M15.5 5h3"/>'),
+  scroll: sv('<path class="d" d="M7 3h11a2 2 0 0 1 2 2v13H9v1a2 2 0 0 1-2 2"/><path d="M7 21a2 2 0 0 1-2-2V5a2 2 0 1 0-4 0v2h4M7 3h11a2 2 0 0 1 2 2v12M7 21h12a2 2 0 0 0 2-2v-2H9v2a2 2 0 0 1-2 2zM10 8h6M10 12h6"/>'),
+  chart: sv('<path class="d" d="M7 13h3v7H7zM14 8h3v12h-3z"/><path d="M3 3v18h18M7 13h3v7H7zM14 8h3v12h-3z"/>'),
+  repeat: sv('<path d="M17 2l4 4-4 4"/><path d="M3 12v-2a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 12v2a4 4 0 0 1-4 4H3"/>'),
+  feather: sv('<path class="d" d="M20.2 12.2a6 6 0 0 0-8.5-8.5L5 10.5V19h8.5z"/><path d="M20.2 12.2a6 6 0 0 0-8.5-8.5L5 10.5V19h8.5zM16 8L2 22M17.5 15H9"/>'),
+  ruler: sv('<rect class="d" x="2" y="7" width="20" height="10" rx="2"/><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 7v4M10 7v3M14 7v4M18 7v3"/>'),
+  layers: sv('<path class="d" d="M12 2.5l9.5 5-9.5 5-9.5-5z"/><path d="M12 2.5l9.5 5-9.5 5-9.5-5zM2.5 12l9.5 5 9.5-5M2.5 16.5l9.5 5 9.5-5"/>'),
+  gauge: sv('<path class="d" d="M3 15a9 9 0 0 1 18 0z"/><path d="M3 15a9 9 0 0 1 18 0M12 15l4-5M6.5 15h.01M17.5 15h.01M12 8.5v.01"/><path d="M3 19h18"/>'),
+  gear: sv('<circle cx="12" cy="12" r="3"/><path class="d" d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
+  sparkle: sv('<path class="d" d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z"/><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z"/>'),
 };
 
 /* ================= Configuração do processo ================= */
 // cor de cada sistema
-const TAGS = { APP: 'amethyst', Revolog: 'emerald', SA05: 'ruby', MSC2N: 'aqua', Skelta: 'rose' };
+const TAGS = { APP: 'lime', Revolog: 'gray', SA05: 'ruby', MSC2N: 'purple', Skelta: 'forest' };
 
 // 7 etapas de preparo de cada caminhão — cada uma com sua cor
 const PREP = [
-  { k: 'op', l: 'OP', full: 'Abrir ordem de processo', c: 'sapphire' },
-  { k: 'msc2n', l: 'MSC2N', full: 'Fixar datas dos lotes na MSC2N', c: 'aqua', tags: ['MSC2N'] },
-  { k: 'rot', l: 'Rótulos', full: 'Imprimir rótulos de envase', c: 'topaz' },
-  { k: 'od', l: 'ODs', full: 'Criar ODs de insumos', c: 'copper' },
-  { k: 'skelta', l: 'Skelta', full: 'Criar etiquetas de envase (Skelta)', c: 'rose', tags: ['Skelta'] },
-  { k: 'revolog', l: 'Revolog', full: 'Criar agendamento de envase (Revolog)', c: 'emerald', tags: ['Revolog'] },
-  { k: 'app', l: 'APP', full: 'Inserir a programação no APP', c: 'amethyst', tags: ['APP'] },
+  { k: 'op', l: 'OP', full: 'Abrir ordem de processo', c: 'topaz', ic: 'clipboard' },
+  { k: 'msc2n', l: 'MSC2N', full: 'Fixar datas dos lotes na MSC2N', c: 'purple', ic: 'calCheck', tags: ['MSC2N'] },
+  { k: 'rot', l: 'Rótulos', full: 'Imprimir rótulos de envase', c: 'navy', ic: 'printer' },
+  { k: 'od', l: 'ODs', full: 'Criar ODs de insumos', c: 'sky', ic: 'package' },
+  { k: 'skelta', l: 'Skelta', full: 'Criar etiquetas de envase (Skelta)', c: 'forest', ic: 'barcode', tags: ['Skelta'] },
+  { k: 'revolog', l: 'Revolog', full: 'Criar agendamento de envase (Revolog)', c: 'gray', ic: 'calClock', tags: ['Revolog'] },
+  { k: 'app', l: 'APP', full: 'Inserir a programação no APP', c: 'lime', ic: 'phone', tags: ['APP'] },
 ];
 
 const SEQ = [
@@ -49,7 +74,7 @@ const SEQ = [
   { id: 'reprocesso', title: 'Criar ordens de reprocesso e solicitar reporte ao operador', tags: ['SA05'], c: 'ruby' },
   { id: 'fechar-ordens', title: 'Fechar ordens de processo do dia anterior', desc: 'Envase principal + reprocesso', c: 'copper' },
   { id: 'prog-seguinte', title: 'Iniciar a programação do dia seguinte (e próximos)', c: 'amethyst',
-    sub: PREP.map((p) => ({ id: 'prep-' + p.k, title: p.full, tags: p.tags, prep: p.k, c: p.c, l: p.l })) },
+    sub: PREP.map((p) => ({ id: 'prep-' + p.k, title: p.full, tags: p.tags, prep: p.k, c: p.c, l: p.l, ic: p.ic })) },
 ];
 
 const ROTINA = [
@@ -61,9 +86,9 @@ const ROTINA = [
 ];
 
 const TURNOS = [
-  { n: 'Manhã', icon: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>' },
-  { n: 'Tarde', icon: '<svg viewBox="0 0 24 24"><path d="M17 18a5 5 0 0 0-10 0M12 2v7M4.2 10.2l1.4 1.4M1 18h2M21 18h2M18.4 11.6l1.4-1.4M23 22H1M8 6l4-4 4 4"/></svg>' },
-  { n: 'Noite', icon: '<svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>' },
+  { n: 'Manhã', icon: I.sun },
+  { n: 'Tarde', icon: I.sunset },
+  { n: 'Noite', icon: I.moon },
 ];
 
 // janelas sugeridas do dia operacional (00:30 e 03:00 caem na madrugada seguinte)
@@ -172,7 +197,7 @@ const slotIdx = (id) => SLOTS.findIndex((s) => s.id === id);
 function turnoEnd(i) { let j = i; while (j + 1 < SLOTS.length && SLOTS[j + 1].turno === SLOTS[i].turno) j++; return j; }
 function weightOf(e) {
   if (e.janelas && e.janelas !== 'auto') return Number(e.janelas);
-  if (e.tipo === 'tambor') { const i = slotIdx(e.slot); return i < 0 ? 2.5 : turnoEnd(i) - i + 1; }
+  if (e.tipo === 'tambor') { const i = effSlotIdx(e); return i < 0 ? 2.5 : turnoEnd(i) - i + 1; }
   return TYPES[e.tipo]?.w || 1;
 }
 function durMin(e) {
@@ -180,7 +205,27 @@ function durMin(e) {
   if (e.tipo === 'tambor') return weightOf(e) * 3 * 60;
   return (TYPES[e.tipo]?.dur || 3) * 60;
 }
-const plannedOp = (e) => { const i = slotIdx(e.slot); return i < 0 ? null : slotOp(SLOTS[i]); };
+// horário imprevisto (e.hora) substitui a janela; a janela substitui o imprevisto
+const isImp = (e) => slotIdx(e.slot) < 0 && e.hora != null;
+function slotIndexForOp(op) { let idx = 0; SLOTS.forEach((s, i) => { if (slotOp(s) <= op + 0.5) idx = i; }); return idx; }
+const effSlotIdx = (e) => { const i = slotIdx(e.slot); if (i >= 0) return i; return e.hora != null ? slotIndexForOp(e.hora) : -1; };
+const plannedOp = (e) => { const i = slotIdx(e.slot); if (i >= 0) return slotOp(SLOTS[i]); return e.hora ?? null; };
+function slotLabel(e) { const i = slotIdx(e.slot); if (i >= 0) return TURNOS[SLOTS[i].turno].n; return e.hora != null ? 'imprevisto' : 'sem janela'; }
+const parseQty = (v) => { const n = Number(String(v || '').replace(/\./g, '').replace(',', '.')); return v && isFinite(n) && n > 0 ? n : null; };
+const fmtQty = (n, un) => `${Number(n).toLocaleString('pt-BR')} ${un || 'kg'}`;
+function repTotals(list) {
+  const t = {};
+  list.forEach((e) => { if (e.repQtd) t[e.repUn || 'kg'] = (t[e.repUn || 'kg'] || 0) + Number(e.repQtd); });
+  return Object.entries(t).map(([u, n]) => fmtQty(n, u)).join(' + ');
+}
+function infoChips(e) {
+  const out = [];
+  if (isImp(e)) out.push(`<span class="ichip imp">${I.alarm}Imprevisto ${opToHHMM(e.hora)}</span>`);
+  if (e.repQtd) out.push(`<span class="ichip rep">${I.recycle}Reprocesso ${fmtQty(e.repQtd, e.repUn)}</span>`);
+  if (e.os) out.push(`<span class="ichip">${I.file}OS ${esc(e.os)}</span>`);
+  if (e.op) out.push(`<span class="ichip">${I.hash}OP ${esc(e.op)}</span>`);
+  return out.join('');
+}
 function startOp(e, k) {
   if (e.t?.inicio) return msToOp(k, e.t.inicio);
   if (e.ajuste != null) return e.ajuste;
@@ -212,7 +257,7 @@ function layout(list) {
     if (e.status === 'cancelado') { cancelled.push(e); return; }
     const w = weightOf(e);
     used += w;
-    const i0 = slotIdx(e.slot);
+    const i0 = effSlotIdx(e);
     if (i0 < 0) { unassigned.push(e); return; }
     let rem = w, i = i0, first = true;
     while (rem > 1e-9 && i < SLOTS.length) {
@@ -483,11 +528,11 @@ function renderNextStep() {
     const left = n.st.total - n.st.n;
     el.className = `next-step c-${p.c}`;
     el.innerHTML = `
-      <div class="ns-icon">${n.num}</div>
+      <div class="ns-icon">${I[p.ic]}</div>
       <div class="ns-body">
         <div class="ns-label">Próximo passo · ${esc(p.l)} · caminhão ${n.st.n + 1} de ${n.st.total}</div>
         <div class="ns-title">${esc(p.full)}</div>
-        <div class="ns-sub">${tm != null ? `<b>${opToHHMM(tm)}</b> · ` : ''}<b>${esc(e.material)}</b>${e.cliente ? ' · ' + esc(e.cliente) : ''} — ${fmtShort(fromKey(n.pk))}</div>
+        <div class="ns-sub">${tm != null ? `<b>${opToHHMM(tm)}</b> · ` : ''}<b>${esc(e.material)}</b>${e.os ? ' · OS ' + esc(e.os) : ''} — ${fmtShort(fromKey(n.pk))}</div>
       </div>
       <div class="ns-actions">
         <button class="btn btn-step c-${p.c}" data-prep-one="${p.k}" data-env="${e.id}" data-day="${n.pk}">${I.check} Confirmar neste</button>
@@ -525,7 +570,7 @@ function renderSeq() {
           <div class="task-body">
             <div class="task-title" data-toggle="${it.id}">${esc(it.title)}</div>
             ${it.desc ? `<div class="task-desc">${esc(it.desc)}</div>` : ''}
-            ${(it.tags || done) ? `<div class="task-meta">${tagsHtml(it.tags)}${done ? `<span class="time">✓ ${fmtTime(day.checks[it.id])}</span>` : ''}</div>` : ''}
+            ${(it.tags || done || seqExtra(it)) ? `<div class="task-meta">${tagsHtml(it.tags)}${seqExtra(it)}${done ? `<span class="time">✓ ${fmtTime(day.checks[it.id])}</span>` : ''}</div>` : ''}
           </div>
         </li>`;
       return;
@@ -582,6 +627,15 @@ function renderSeq() {
   $('#seqCount').textContent = `${p.done}/${p.total}`;
   $('#seqCount').className = 'pill' + (p.done === p.total ? ' ok' : '');
   $('#seqSub').textContent = `Referente a ${fmtShort(prevOpDay(new Date()))} → programando ${pkLabel}`;
+}
+
+// reprocessos do dia anterior aparecem na etapa de reprocesso
+function seqExtra(it) {
+  if (it.id !== 'reprocesso') return '';
+  const pk = keyOf(prevOpDay(new Date()));
+  const list = active(getPlan(pk)).filter((e) => e.repQtd);
+  if (!list.length) return '';
+  return `<button class="link-btn rep-link" data-goto="agenda" data-day="${pk}">${I.recycle}${list.length} reprocesso${list.length > 1 ? 's' : ''} de ${fmtShort(fromKey(pk))} · ${repTotals(list)} →</button>`;
 }
 
 function renderRotina() {
@@ -650,14 +704,16 @@ function renderTodayTrucks() {
     const adjusted = p != null && s != null && Math.round(s) !== Math.round(p);
     const late = lateNoShow(e, k);
     const ov = sch.overlaps.find((x) => x.e.id === e.id);
-    const sub = [e.cliente, e.placa].filter(Boolean).join(' · ');
+    const sub = '';
+    const chips = infoChips(e);
     const times = [e.t?.chegada && `chegou ${fmtTime(e.t.chegada)}`, e.t?.inicio && `início ${fmtTime(e.t.inicio)}`, e.t?.fim && `fim ${fmtTime(e.t.fim)}`].filter(Boolean).join(' · ');
     return `<div class="truck-row st-${e.status}">
       <div class="tr-time ${adjusted ? 'adjusted' : ''}">
-        <b>${s != null ? opToHHMM(s) : '—'}</b>${adjusted ? `<s>${opToHHMM(p)}</s>` : `<small>${p != null ? TURNOS[SLOTS[slotIdx(e.slot)].turno].n : 'sem janela'}</small>`}
+        <b>${s != null ? opToHHMM(s) : '—'}</b>${adjusted ? `<s>${opToHHMM(p)}</s>` : `<small>${slotLabel(e)}</small>`}
       </div>
       <div class="tr-main">
         <div class="tr-top">${mono(e)}<span class="tr-mat" data-edit="${e.id}" data-day="${k}">${esc(e.material)}</span>${statusPill(e)}${adjusted ? delayHtml(s - p) : ''}${late ? `<span class="delay alarm">sem chegada ${fmtDelta(late)}</span>` : ''}${ov ? `<span class="delay alarm">sobrepõe ${Math.round(ov.overlap)} min</span>` : ''}</div>
+        ${chips ? `<div class="tc-info">${chips}</div>` : ''}
         <div class="tr-sub">${esc(sub)}${sub && times ? ' · ' : ''}${times}${e.motivo && adjusted ? ` · <span style="color:var(--warn)">${esc(e.motivo)}</span>` : ''}</div>
         ${e.status !== 'concluido' && e.status !== 'cancelado' ? `<div class="tr-actions">${actionBtn(e, k, true)}${adjustBtn(e, k, true)}</div>` : ''}
       </div>
@@ -747,7 +803,7 @@ function tcard(e, k, sch) {
   const adjusted = p != null && s != null && Math.round(s) !== Math.round(p);
   const late = lateNoShow(e, k);
   const ov = sch?.overlaps.find((x) => x.e.id === e.id);
-  const sub = [e.cliente, e.placa, e.op && 'OP ' + e.op].filter(Boolean).join(' · ');
+  const sub = infoChips(e);
   const pd = prepDone(e);
   const t = TYPES[e.tipo] || TYPES.padrao;
   const order = ['programado', 'chegou', 'envasando', 'concluido'];
@@ -755,7 +811,7 @@ function tcard(e, k, sch) {
   const stamps = [null, e.t?.chegada, e.t?.inicio, e.t?.fim];
   const labels = ['Programado', 'Chegada', 'Envase', 'Fim'];
   let times = '';
-  if (p != null) times += `<div class="tt"><small>Previsto</small><b>${adjusted ? `<s>${opToHHMM(p)}</s>` : opToHHMM(p)}</b></div>`;
+  if (p != null) times += `<div class="tt"><small>${isImp(e) ? 'Imprevisto' : 'Previsto'}</small><b>${adjusted ? `<s>${opToHHMM(p)}</s>` : opToHHMM(p)}</b></div>`;
   if (s != null && (adjusted || p == null)) times += `<div class="tt gold"><small>${e.t?.inicio ? 'Início real' : 'Ajustado'}</small><b>${opToHHMM(s)}</b>${p != null ? delayHtml(s - p) : ''}</div>`;
   if (en != null) times += `<div class="tt"><small>${e.t?.fim ? 'Fim real' : 'Término prev.'}</small><b>${opToHHMM(en)}</b></div>`;
   times += `<div class="tt"><small>Duração</small><b>${fmtNum(durMin(e) / 60)}h</b></div>`;
@@ -764,16 +820,16 @@ function tcard(e, k, sch) {
     <div class="tc-top">${mono(e)}<span class="muted small">${esc(t.n)} · ${fmtNum(weightOf(e))} jan.</span><span class="spacer"></span>
       ${late ? `<span class="delay alarm">sem chegada ${fmtDelta(late)}</span>` : ''}${ov ? `<span class="delay alarm">sobrepõe ${Math.round(ov.overlap)} min</span>` : ''}${statusPill(e)}</div>
     <div class="tc-mat" data-edit="${e.id}" data-day="${k}">${esc(e.material)}</div>
-    ${sub ? `<div class="tc-sub">${esc(sub)}</div>` : ''}
+    ${sub ? `<div class="tc-info">${sub}</div>` : ''}
     <div class="tc-times">${times}</div>
     ${e.motivo && (adjusted || e.ajuste != null) ? `<div class="tc-motivo">Motivo: ${esc(e.motivo)}</div>` : ''}
     ${e.status !== 'cancelado' ? `<div class="stepper">${order.map((st, i) => `<div class="st-dot ${i <= idx ? 'on' : ''} ${i === idx ? 'cur' : ''}"><i></i><span>${labels[i]}</span><small>${stamps[i] ? fmtTime(stamps[i]) : ''}</small></div>`).join('')}</div>` : ''}
     ${e.obs ? `<div class="tc-obs">${esc(e.obs)}</div>` : ''}
     <div class="prep-dots">
-      ${PREP.map((pp) => `<button type="button" class="pdot c-${pp.c} ${e.prep?.[pp.k] ? 'on' : ''}" data-prep-one="${pp.k}" data-env="${e.id}" data-day="${k}" title="${esc(pp.full)}">${I.check}${esc(pp.l)}</button>`).join('')}
+      ${PREP.map((pp) => `<button type="button" class="pdot c-${pp.c} ${e.prep?.[pp.k] ? 'on' : ''}" data-prep-one="${pp.k}" data-env="${e.id}" data-day="${k}" title="${esc(pp.full)}">${e.prep?.[pp.k] ? I.check : I[pp.ic]}${esc(pp.l)}</button>`).join('')}
       <span class="prep-count ${pd === PREP.length ? 'ok' : ''}">${pd}/${PREP.length}</span>
     </div>
-    <div class="tc-actions">${actionBtn(e, k, false)}${adjustBtn(e, k, false)}<span class="spacer"></span><button class="btn btn-ghost btn-sm" data-edit="${e.id}" data-day="${k}">${I.edit}Editar</button></div>
+    <div class="tc-actions">${actionBtn(e, k, false)}${adjustBtn(e, k, false)}<span class="spacer"></span><button class="btn btn-ghost btn-sm" data-edit="${e.id}" data-day="${k}" data-focus="hora">${I.alarm}Imprevisto</button><button class="btn btn-ghost btn-sm" data-edit="${e.id}" data-day="${k}">${I.edit}Editar</button></div>
   </article>`;
 }
 
@@ -859,11 +915,11 @@ function renderCapacity(k, list, L, sch) {
   act.forEach((e) => { const l = lateNoShow(e, k); if (l) alerts.push(`<div class="alert warn">${esc(e.material)} sem chegada · ${fmtDelta(l)} — justificar na Revolog</div>`); });
 
   $('#capCard').innerHTML = `
-    <h3 class="mini-title">${esc(fmtLong(fromKey(k)))}</h3>
+    <h3 class="mini-title">${I.gauge}${esc(fmtLong(fromKey(k)))}</h3>
     <div class="cap-big"><b>${fmtNum(L.used)}</b><span>/ ${CAP} janelas</span></div>
     <div class="cap-seg ${free < -1e-9 ? 'over' : ''}">${segs}</div>
     <div class="cap-free ${freeCls}">${freeTxt}</div>
-    ${freeSlots.length ? `<div class="free-slots">${freeSlots.map((x) => `<button class="free-slot" data-add-slot="${x.s.id}" title="Agendar neste horário">${x.s.t}${x.f > 0 ? ' · ½' : ''}</button>`).join('')}</div>` : ''}
+    <div class="free-slots">${freeSlots.map((x) => `<button class="free-slot" data-add-slot="${x.s.id}" title="Agendar neste horário">${x.s.t}${x.f > 0 ? ' · ½' : ''}</button>`).join('')}<button class="free-slot imp" data-new-imp>${I.alarm}Imprevisto</button></div>
     <div class="divider">✦</div>
     <div class="cap-stats">
       <div class="stat"><small>1º envase</small><b>${sch.items.length ? opToHHMM(sch.items[0].s) : '—'}</b></div>
@@ -871,7 +927,7 @@ function renderCapacity(k, list, L, sch) {
       <div class="stat"><small>Concluídos</small><b>${concl}/${act.length}</b></div>
       <div class="stat"><small>Atraso somado</small><b>${totalDelay ? fmtDelta(totalDelay) : '0'}</b></div>
       <div class="stat"><small>Preparo pronto</small><b>${ready}/${act.length}</b></div>
-      <div class="stat"><small>Caminhões</small><b>${act.length}</b></div>
+      <div class="stat stat-rep"><small>${I.recycle}Reprocesso</small><b class="${repTotals(act) ? 'stat-sm' : ''}">${repTotals(act) || '—'}</b></div>
     </div>
     ${alerts.length ? `<div class="alerts">${alerts.join('')}</div>` : ''}
     <button class="btn btn-ghost hide-mobile" style="width:100%;margin-top:14px" data-add-slot="">${I.plus} Novo caminhão</button>`;
@@ -903,7 +959,7 @@ function renderPreparo() {
     </div>
     <div class="step-legend">${PREP.map((p, i) => {
       const n = list.filter((e) => e.prep?.[p.k]).length;
-      return `<div class="sl-item c-${p.c}"><b><i>${i + 1}</i>${esc(p.l)}</b><small>${n}/${list.length}</small><div class="sub-bar"><i style="width:${list.length ? (n / list.length) * 100 : 0}%"></i></div></div>`;
+      return `<div class="sl-item c-${p.c}"><b><i>${i + 1}</i>${I[p.ic]}${esc(p.l)}</b><small>${n}/${list.length}</small><div class="sub-bar"><i style="width:${list.length ? (n / list.length) * 100 : 0}%"></i></div></div>`;
     }).join('')}</div>`;
 
   const body = $('#prepBody');
@@ -918,7 +974,7 @@ function renderPreparo() {
       const n = list.filter((e) => e.prep?.[p.k]).length;
       const all = n === list.length;
       return `<section class="stepcard c-${p.c} ${all ? 'done' : ''}">
-        <div class="sc-head"><span class="sc-num">${i + 1}</span><div><b>${esc(p.full)}</b><small>${n}/${list.length} caminhões</small></div></div>
+        <div class="sc-head"><span class="sc-num">${I[p.ic]}</span><div><b><em>${i + 1}</em>${esc(p.full)}</b><small>${n}/${list.length} caminhões</small></div></div>
         <div class="sc-bar"><i style="width:${(n / list.length) * 100}%"></i></div>
         <div class="sc-body">${list.map((e) => {
           const s = startOp(e, k);
@@ -939,13 +995,12 @@ function renderPreparo() {
     const nxt = nextPrepOf(e);
     const open = openTrucks.has(e.id);
     const s = startOp(e, k);
-    const slot = SLOTS[slotIdx(e.slot)];
-    return `<article class="pcard ${open ? 'open' : ''} ${ready ? 'ready' : ''}">
+        return `<article class="pcard ${open ? 'open' : ''} ${ready ? 'ready' : ''}">
       <button class="pc-head" data-pc-toggle="${e.id}" aria-expanded="${open}">
-        <div class="pc-time"><b>${s != null ? opToHHMM(s) : '—'}</b><small>${slot ? TURNOS[slot.turno].n : 'sem janela'}</small></div>
+        <div class="pc-time"><b>${s != null ? opToHHMM(s) : '—'}</b><small>${slotLabel(e)}</small></div>
         <div>
           <div class="pc-mat">${mono(e)}${esc(e.material)}${ready ? '<span class="pc-ready">Pronto</span>' : ''}</div>
-          <div class="pc-sub">${esc([e.cliente, e.placa, e.op && 'OP ' + e.op].filter(Boolean).join(' · ') || TYPES[e.tipo]?.n || '')}</div>
+          <div class="pc-sub">${infoChips(e) ? `<span class="tc-info">${infoChips(e)}</span>` : esc(TYPES[e.tipo]?.n || '')}</div>
           <div class="pc-dots">${PREP.map((p) => `<i class="c-${p.c} ${e.prep?.[p.k] ? 'on' : ''}"></i>`).join('')}</div>
         </div>
         <div class="pc-right"><span class="pc-count">${pd}/7</span><span class="pc-chev">${I.chev}</span></div>
@@ -955,7 +1010,7 @@ function renderPreparo() {
           const on = e.prep?.[p.k];
           return `<li><button class="pstep c-${p.c} ${on ? 'done' : ''} ${nxt?.k === p.k ? 'next' : ''}" data-prep-one="${p.k}" data-env="${e.id}" data-day="${k}">
             <span class="ps-num"><span>${i + 1}</span>${I.check}</span>
-            <span class="ps-title"><small>${esc(p.l)}</small>${esc(p.full)}</span>
+            <span class="ps-title"><small>${I[p.ic]}${esc(p.l)}</small>${esc(p.full)}</span>
             <span class="ps-time">${on ? fmtTime(on) : ''}</span>
           </button></li>`;
         }).join('')}</ol>
@@ -1158,11 +1213,21 @@ function fillSlotOptions(dayKey, selected, ignoreId) {
     return `<option value="${s.id}" ${s.id === selected ? 'selected' : ''}>${s.t} · ${TURNOS[s.turno].n} (${st})</option>`;
   }).join('');
 }
+let horaMode = 'janela';
+function setHoraMode(m) {
+  horaMode = m;
+  $$('#horaSeg button').forEach((b) => b.classList.toggle('active', b.dataset.horaMode === m));
+  $('#slotWrap').hidden = m !== 'janela';
+  $('#horaWrap').hidden = m !== 'imprevisto';
+  updateHint();
+}
 function updateHint() {
-  const e = { tipo: form.tipo.value, slot: form.slot.value, janelas: form.janelas.value, dur: 'auto' };
+  const e = { tipo: form.tipo.value, slot: horaMode === 'janela' ? form.slot.value : '', hora: horaMode === 'imprevisto' && form.hora.value ? hhmmToOp(form.hora.value) : null, janelas: form.janelas.value, dur: 'auto' };
   form.janelas.options[0].textContent = `Automático (${fmtNum(weightOf(e))})`;
   form.dur.options[0].textContent = `Automático (${fmtNum(durMin({ ...e, janelas: form.janelas.value }) / 60)} h)`;
-  $('#tipoHint').textContent = TYPES[form.tipo.value]?.hint || '';
+  $('#tipoHint').textContent = horaMode === 'imprevisto'
+    ? 'Horário fora da lista: a janela sugerida é ignorada. Escolher uma janela de novo apaga este horário.'
+    : (TYPES[form.tipo.value]?.hint || '');
 }
 function firstFreeSlot(dayKey) {
   const L = layout(getPlan(dayKey));
@@ -1185,9 +1250,15 @@ function openEnv(dayKey, id, slot) {
   }
   form.dur.value = e?.dur ? String(e.dur) : 'auto';
   form.dia.value = dayKey;
-  fillSlotOptions(dayKey, e ? e.slot : (slot ?? firstFreeSlot(dayKey)), e?.id);
-  form.cliente.value = e?.cliente || '';
-  form.placa.value = e?.placa || '';
+  fillSlotOptions(dayKey, e ? e.slot : (slot && slot !== '__imp' ? slot : firstFreeSlot(dayKey)), e?.id);
+  form.repQtd.value = e?.repQtd != null ? String(e.repQtd).replace('.', ',') : '';
+  form.repUn.value = e?.repUn || 'kg';
+  form.os.value = e?.os || '';
+  const impMode = (e && isImp(e)) || slot === '__imp';
+  let hv = e?.hora != null ? opToHHMM(e.hora) : '';
+  if (!e && impMode && dayKey === currentOpDayKey()) { const n = new Date(); hv = `${pad(n.getHours())}:${pad(Math.floor(n.getMinutes() / 5) * 5)}`; }
+  form.hora.value = hv;
+  setHoraMode(impMode ? 'imprevisto' : 'janela');
   form.op.value = e?.op || '';
   form.status.value = e?.status || 'programado';
   form.obs.value = e?.obs || '';
@@ -1199,16 +1270,19 @@ function saveEnv() {
   const dia = form.dia.value || editing.day;
   const data = {
     material: form.material.value.trim(), tipo: form.tipo.value, janelas: form.janelas.value, dur: form.dur.value,
-    slot: form.slot.value, cliente: form.cliente.value.trim(), placa: form.placa.value.trim(),
+    slot: horaMode === 'janela' ? form.slot.value : '',
+    hora: horaMode === 'imprevisto' && form.hora.value ? hhmmToOp(form.hora.value) : null,
+    repQtd: parseQty(form.repQtd.value), repUn: form.repUn.value, os: form.os.value.trim(),
     op: form.op.value.trim(), status: form.status.value, obs: form.obs.value.trim(),
   };
   if (!data.material) { form.material.focus(); return false; }
+  if (horaMode === 'imprevisto' && data.hora == null) { form.hora.focus(); toast('Informe o horário imprevisto'); return false; }
   if (editing.id) {
     const src = S.plan[editing.day] || [];
     const i = src.findIndex((x) => x.id === editing.id);
     const old = src[i];
     const e = { ...old, ...data };
-    if (old.slot !== data.slot) { e.ajuste = null; }
+    if (old.slot !== data.slot || (old.hora ?? null) !== data.hora) { e.ajuste = null; }
     // status voltou no ciclo: limpa carimbos posteriores
     const order = ['programado', 'chegou', 'envasando', 'concluido'];
     const ni = order.indexOf(data.status);
@@ -1236,6 +1310,12 @@ document.addEventListener('click', (ev) => {
   let el;
 
   if ((el = c('.tab-btn'))) return setTab(el.dataset.tab);
+  if ((el = c('[data-hora-mode]'))) {
+    setHoraMode(el.dataset.horaMode);
+    if (horaMode === 'imprevisto') { if (!form.hora.value && form.slot.value) form.hora.value = SLOTS[slotIdx(form.slot.value)].t; form.hora.focus(); }
+    return;
+  }
+  if (c('[data-new-imp]')) return openEnv(currentTab === 'preparo' ? prDay : agDay, null, '__imp');
 
   // diálogo de ajuste
   if ((el = c('[data-adj-add]'))) { adj.value = Math.max(-60, adj.value + Number(el.dataset.adjAdd)); return renderAdjust(); }
@@ -1352,7 +1432,11 @@ document.addEventListener('click', (ev) => {
   if (c('[data-close]')) { c('dialog')?.close(); return; }
   if ((el = c('[data-theme-set]'))) { S.settings.theme = el.dataset.themeSet; save(); applyTheme(); return; }
   if (c('select, input, textarea, label')) return;
-  if ((el = c('[data-edit]'))) return openEnv(el.dataset.day, el.dataset.edit);
+  if ((el = c('[data-edit]'))) {
+    openEnv(el.dataset.day, el.dataset.edit);
+    if (el.dataset.focus === 'hora') { setHoraMode('imprevisto'); if (!form.hora.value && form.slot.value) form.hora.value = SLOTS[slotIdx(form.slot.value)].t; form.hora.focus(); }
+    return;
+  }
 });
 
 // depois de confirmar uma etapa de preparo: se o caminhão ficou pronto, abre o próximo
@@ -1379,7 +1463,7 @@ document.addEventListener('change', (ev) => {
     st.note = t.value.trim(); save();
     return;
   }
-  if (t === form.tipo || t === form.slot || t === form.janelas) updateHint();
+  if (t === form.tipo || t === form.slot || t === form.janelas || t === form.hora) updateHint();
   if (t === form.dia && t.value) { fillSlotOptions(t.value, form.slot.value, editing?.id); updateHint(); }
 });
 
@@ -1409,7 +1493,7 @@ $('#envDelete').addEventListener('click', () => {
 $('#envDuplicate').addEventListener('click', () => {
   if (!editing?.id) return;
   const src = findTruck(editing.day, editing.id);
-  (S.plan[editing.day] ||= []).push({ ...src, id: uid(), created: Date.now(), prep: {}, t: {}, ajuste: null, motivo: '', status: 'programado', slot: firstFreeSlot(editing.day) });
+  (S.plan[editing.day] ||= []).push({ ...src, id: uid(), created: Date.now(), prep: {}, t: {}, ajuste: null, motivo: '', status: 'programado', slot: firstFreeSlot(editing.day), hora: null });
   save(); dlg.close(); render();
   toast('Caminhão duplicado na próxima janela livre');
 });
@@ -1478,6 +1562,7 @@ setInterval(() => {
 document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
 
 /* ================= Início ================= */
+$$('[data-ic]').forEach((el) => { el.innerHTML = I[el.dataset.ic] || ''; });
 fillSelects();
 renderLegend();
 applyTheme();

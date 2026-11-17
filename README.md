@@ -3,7 +3,7 @@
 Checklist diária da sequência Filling, agenda de caminhões por horário e preparo das 7 etapas por caminhão.
 
 - **Hoje** — sequência colorida por etapa, próximo passo (inclusive caminhão por caminhão), caminhões do dia com chegada/início/fim.
-- **Agenda** — régua do dia (previsto × real), janelas por turno, **Ajustar horário** com motivo e opção de empurrar os seguintes.
+- **Agenda** — régua do dia (previsto × real), janelas por turno, **horário imprevisto** fora da lista, reprocesso e OS por caminhão, **Ajustar horário** com motivo e opção de empurrar os seguintes.
 - **Preparo** — confirme as etapas 1 a 1 por caminhão, ou cada etapa em todos de uma vez.
 - **Histórico** — conclusão da sequência e atraso médio de chegada.
 Funciona no PC e no celular, salva tudo no próprio navegador e funciona offline.
