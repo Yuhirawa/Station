@@ -992,3 +992,35 @@ svg .d { fill: currentColor; fill-opacity: .17; stroke: none; }
 .seg-full button svg { width: 16px; height: 16px; }
 .input-unit { display: grid; grid-template-columns: 1fr 90px; gap: 6px; }
 #horaWrap input { font-weight: 600; }
+
+/* ---------- Reprocessos (vários por caminhão) ---------- */
+.rep-field { padding: 12px; border-radius: 14px; background: color-mix(in srgb, var(--j-ruby) 5%, transparent); border: 1px solid color-mix(in srgb, var(--j-ruby) 22%, transparent); }
+.rep-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rep-head .fl { display: inline-flex; align-items: center; gap: 6px; color: var(--j-ruby); }
+.rep-head .fl svg { width: 15px; height: 15px; }
+.rep-total { font-size: 12px; font-weight: 700; color: var(--j-ruby); font-variant-numeric: tabular-nums; }
+.rep-list { display: flex; flex-direction: column; gap: 8px; }
+.rep-row { display: grid; grid-template-columns: 24px 1fr 88px 1.25fr 36px; gap: 6px; align-items: center; animation: fade .25s var(--ease); }
+.rep-row input, .rep-row select { padding: 9px 10px; font-size: 14px; }
+.rep-row select { padding-right: 28px; background-position: right 9px center; }
+.rep-n { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; color: var(--ci); background: var(--j-ruby); }
+[data-theme='dark'] .rep-n { color: #1a0c12; }
+.rep-del { width: 36px; height: 38px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--muted); display: grid; place-items: center; padding: 0; }
+.rep-del:hover { color: var(--danger); border-color: var(--danger); background: var(--danger-soft); }
+.rep-del svg { width: 16px; height: 16px; }
+.rep-add {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; border-radius: 12px;
+  border: 1.5px dashed color-mix(in srgb, var(--j-ruby) 55%, transparent); background: transparent;
+  color: var(--j-ruby); font-weight: 700; font-size: 13.5px; transition: .2s;
+}
+.rep-add:hover { background: color-mix(in srgb, var(--j-ruby) 10%, transparent); border-style: solid; }
+.rep-add [data-ic] { width: 22px; height: 22px; border-radius: 50%; background: var(--j-ruby); color: var(--ci); }
+[data-theme='dark'] .rep-add [data-ic] { color: #1a0c12; }
+.rep-add svg { width: 15px; height: 15px; stroke-width: 3; }
+.ichip.rep b { font-weight: 700; }
+@media (max-width: 720px) {
+  .rep-row { grid-template-columns: 24px 1fr 84px 36px; }
+  .rep-row .rl { grid-column: 2 / 4; grid-row: 2; }
+  .rep-row .rep-del { grid-column: 4; grid-row: 1; }
+  .rep-row + .rep-row { padding-top: 8px; border-top: 1px dashed color-mix(in srgb, var(--j-ruby) 25%, transparent); }
+}

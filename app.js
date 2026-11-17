@@ -169,6 +169,8 @@ function blank() { return { days: {}, plan: {}, settings: { theme: 'dark', prepM
 function migrate(s) {
   Object.values(s.plan || {}).forEach((list) => list.forEach((e) => {
     if (e.status === 'atrasado') e.status = 'programado';
+    if (!e.reps && e.repQtd) { e.reps = [{ qtd: e.repQtd, un: e.repUn || 'kg', lote: '' }]; }
+    delete e.repQtd; delete e.repUn;
     e.t ||= {};
     e.prep ||= {};
   }));
@@ -213,15 +215,17 @@ const plannedOp = (e) => { const i = slotIdx(e.slot); if (i >= 0) return slotOp(
 function slotLabel(e) { const i = slotIdx(e.slot); if (i >= 0) return TURNOS[SLOTS[i].turno].n; return e.hora != null ? 'imprevisto' : 'sem janela'; }
 const parseQty = (v) => { const n = Number(String(v || '').replace(/\./g, '').replace(',', '.')); return v && isFinite(n) && n > 0 ? n : null; };
 const fmtQty = (n, un) => `${Number(n).toLocaleString('pt-BR')} ${un || 'kg'}`;
+// cada caminhão pode ter vários reprocessos: { qtd, un, lote }
+const getReps = (e) => e.reps ?? (e.repQtd ? [{ qtd: e.repQtd, un: e.repUn || 'kg', lote: '' }] : []);
 function repTotals(list) {
   const t = {};
-  list.forEach((e) => { if (e.repQtd) t[e.repUn || 'kg'] = (t[e.repUn || 'kg'] || 0) + Number(e.repQtd); });
+  list.forEach((e) => getReps(e).forEach((r) => { if (r.qtd) t[r.un || 'kg'] = (t[r.un || 'kg'] || 0) + Number(r.qtd); }));
   return Object.entries(t).map(([u, n]) => fmtQty(n, u)).join(' + ');
 }
 function infoChips(e) {
   const out = [];
   if (isImp(e)) out.push(`<span class="ichip imp">${I.alarm}Imprevisto ${opToHHMM(e.hora)}</span>`);
-  if (e.repQtd) out.push(`<span class="ichip rep">${I.recycle}Reprocesso ${fmtQty(e.repQtd, e.repUn)}</span>`);
+  getReps(e).forEach((r) => out.push(`<span class="ichip rep">${I.recycle}Reprocesso${r.qtd ? ' ' + fmtQty(r.qtd, r.un) : ''}${r.lote ? ` <b>· Lote ${esc(r.lote)}</b>` : ''}</span>`));
   if (e.os) out.push(`<span class="ichip">${I.file}OS ${esc(e.os)}</span>`);
   if (e.op) out.push(`<span class="ichip">${I.hash}OP ${esc(e.op)}</span>`);
   return out.join('');
@@ -633,9 +637,11 @@ function renderSeq() {
 function seqExtra(it) {
   if (it.id !== 'reprocesso') return '';
   const pk = keyOf(prevOpDay(new Date()));
-  const list = active(getPlan(pk)).filter((e) => e.repQtd);
-  if (!list.length) return '';
-  return `<button class="link-btn rep-link" data-goto="agenda" data-day="${pk}">${I.recycle}${list.length} reprocesso${list.length > 1 ? 's' : ''} de ${fmtShort(fromKey(pk))} · ${repTotals(list)} →</button>`;
+  const list = active(getPlan(pk)).filter((e) => getReps(e).length);
+  const n = list.reduce((a, e) => a + getReps(e).length, 0);
+  if (!n) return '';
+  const tot = repTotals(list);
+  return `<button class="link-btn rep-link" data-goto="agenda" data-day="${pk}">${I.recycle}${n} reprocesso${n > 1 ? 's' : ''} de ${fmtShort(fromKey(pk))}${tot ? ' · ' + tot : ''} →</button>`;
 }
 
 function renderRotina() {
@@ -1213,6 +1219,33 @@ function fillSlotOptions(dayKey, selected, ignoreId) {
     return `<option value="${s.id}" ${s.id === selected ? 'selected' : ''}>${s.t} · ${TURNOS[s.turno].n} (${st})</option>`;
   }).join('');
 }
+let formReps = [];
+const UNITS = ['kg', 'L', 't', 'IBC', 'tambor'];
+function readRepRows() {
+  return $$('#repList .rep-row').map((row) => ({
+    qtd: parseQty(row.querySelector('.rq').value),
+    un: row.querySelector('.ru').value,
+    lote: row.querySelector('.rl').value.trim(),
+  }));
+}
+function renderRepRows(focusLast) {
+  $('#repList').innerHTML = formReps.map((r, i) => `
+    <div class="rep-row">
+      <span class="rep-n">${i + 1}</span>
+      <input class="rq" type="text" inputmode="decimal" maxlength="12" placeholder="Quantidade" aria-label="Quantidade do reprocesso ${i + 1}" value="${r.qtd != null ? String(r.qtd).replace('.', ',') : ''}">
+      <select class="ru" aria-label="Unidade">${UNITS.map((u) => `<option ${u === (r.un || 'kg') ? 'selected' : ''}>${u}</option>`).join('')}</select>
+      <input class="rl" type="text" maxlength="30" placeholder="Lote" aria-label="Lote do reprocesso ${i + 1}" value="${esc(r.lote || '')}">
+      <button type="button" class="rep-del" data-rep-del="${i}" aria-label="Remover reprocesso ${i + 1}">${I.x}</button>
+    </div>`).join('');
+  updateRepTotal();
+  if (focusLast) $$('#repList .rq').pop()?.focus();
+}
+function updateRepTotal() {
+  const rows = readRepRows().filter((r) => r.qtd || r.lote);
+  const tot = repTotals([{ reps: rows }]);
+  $('#repTotal').textContent = rows.length ? `${rows.length} reprocesso${rows.length > 1 ? 's' : ''}${tot ? ' · ' + tot : ''}` : '';
+}
+
 let horaMode = 'janela';
 function setHoraMode(m) {
   horaMode = m;
@@ -1251,8 +1284,9 @@ function openEnv(dayKey, id, slot) {
   form.dur.value = e?.dur ? String(e.dur) : 'auto';
   form.dia.value = dayKey;
   fillSlotOptions(dayKey, e ? e.slot : (slot && slot !== '__imp' ? slot : firstFreeSlot(dayKey)), e?.id);
-  form.repQtd.value = e?.repQtd != null ? String(e.repQtd).replace('.', ',') : '';
-  form.repUn.value = e?.repUn || 'kg';
+  formReps = e ? getReps(e).map((r) => ({ ...r })) : [];
+  if (!formReps.length) formReps.push({ qtd: null, un: 'kg', lote: '' });
+  renderRepRows();
   form.os.value = e?.os || '';
   const impMode = (e && isImp(e)) || slot === '__imp';
   let hv = e?.hora != null ? opToHHMM(e.hora) : '';
@@ -1272,7 +1306,7 @@ function saveEnv() {
     material: form.material.value.trim(), tipo: form.tipo.value, janelas: form.janelas.value, dur: form.dur.value,
     slot: horaMode === 'janela' ? form.slot.value : '',
     hora: horaMode === 'imprevisto' && form.hora.value ? hhmmToOp(form.hora.value) : null,
-    repQtd: parseQty(form.repQtd.value), repUn: form.repUn.value, os: form.os.value.trim(),
+    reps: readRepRows().filter((r) => r.qtd || r.lote), repQtd: undefined, repUn: undefined, os: form.os.value.trim(),
     op: form.op.value.trim(), status: form.status.value, obs: form.obs.value.trim(),
   };
   if (!data.material) { form.material.focus(); return false; }
@@ -1313,6 +1347,14 @@ document.addEventListener('click', (ev) => {
   if ((el = c('[data-hora-mode]'))) {
     setHoraMode(el.dataset.horaMode);
     if (horaMode === 'imprevisto') { if (!form.hora.value && form.slot.value) form.hora.value = SLOTS[slotIdx(form.slot.value)].t; form.hora.focus(); }
+    return;
+  }
+  if (c('[data-rep-add]')) { formReps = readRepRows(); formReps.push({ qtd: null, un: formReps.at(-1)?.un || 'kg', lote: '' }); renderRepRows(true); return; }
+  if ((el = c('[data-rep-del]'))) {
+    formReps = readRepRows();
+    formReps.splice(Number(el.dataset.repDel), 1);
+    if (!formReps.length) formReps.push({ qtd: null, un: 'kg', lote: '' });
+    renderRepRows();
     return;
   }
   if (c('[data-new-imp]')) return openEnv(currentTab === 'preparo' ? prDay : agDay, null, '__imp');
@@ -1467,6 +1509,8 @@ document.addEventListener('change', (ev) => {
   if (t === form.dia && t.value) { fillSlotOptions(t.value, form.slot.value, editing?.id); updateHint(); }
 });
 
+$('#repList').addEventListener('input', updateRepTotal);
+$('#repList').addEventListener('change', updateRepTotal);
 $('#notes').addEventListener('input', (ev) => {
   clearTimeout(notesTimer);
   $('#notesSaved').textContent = 'salvando…';

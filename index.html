@@ -271,22 +271,18 @@
             <option value="8">8 h</option>
           </select>
         </label>
-        <label>Reprocesso (quantidade)
-          <span class="input-unit">
-            <input name="repQtd" type="text" inputmode="decimal" maxlength="12" placeholder="0">
-            <select name="repUn">
-              <option value="kg">kg</option>
-              <option value="L">L</option>
-              <option value="t">t</option>
-              <option value="IBC">IBC</option>
-              <option value="tambor">tambor</option>
-            </select>
-          </span>
-        </label>
+        <div class="span-2 field rep-field">
+          <div class="rep-head">
+            <span class="fl"><span data-ic="recycle"></span>Reprocessos</span>
+            <span class="rep-total" id="repTotal"></span>
+          </div>
+          <div class="rep-list" id="repList"></div>
+          <button type="button" class="rep-add" data-rep-add><span data-ic="plus"></span>Adicionar reprocesso</button>
+        </div>
         <label>Ordem de serviço
           <input name="os" maxlength="40" placeholder="Nº da OS">
         </label>
-        <label class="span-2">OP / lote
+        <label>OP / lote
           <input name="op" maxlength="40">
         </label>
         <label class="span-2">Observações
