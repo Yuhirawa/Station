@@ -368,6 +368,22 @@ function simulateCascade(k, id, mutate) {
   mutate(e);
   return cascadeList(clone, k, id);
 }
+// envases da linha vistos a partir do dia k (em minutos operacionais de k), incluindo a virada
+// da noite anterior (ex.: começou 05:00 e vai até 08:40) e o começo do dia seguinte
+function lineItemsFor(k) {
+  const base = opStartMs(k);
+  const out = [];
+  for (let i = -3; i <= 3; i++) {
+    const d = addDays(fromKey(k), i);
+    if (!isOpDay(d)) continue;
+    const kk = keyOf(d);
+    schedule(kk).items.forEach((x) => {
+      const s = (opStartMs(kk) + x.s * 60000 - base) / 60000, e = (opStartMs(kk) + x.en * 60000 - base) / 60000;
+      if (e > -60 && s < 2880) out.push({ s, e, m: x.e.material });
+    });
+  }
+  return out;
+}
 // Horários realmente disponíveis do dia, considerando imprevistos, atrasos e envases longos.
 // Se a janela está tomada por um envase em andamento, o horário vai para o fim dele (ex.: 14:30 -> 15:30)
 // e os seguintes se reajustam em cadeia (cada horário sugerido conta como um envase de 3 h).
@@ -375,7 +391,7 @@ function simulateCascade(k, id, mutate) {
 function freeSuggestions(k, durStd = 180, opts = {}) {
   const chain = opts.chain !== false;
   const from = opts.from ?? -Infinity;
-  const items = schedule(k).items.map((x) => ({ s: x.s, e: x.en, m: x.e.material }));
+  const items = lineItemsFor(k);
   const L = layout(getPlan(k));
   const out = [];
   let chainEnd = -Infinity, chainCause = '';
@@ -1311,18 +1327,54 @@ function windowsAfter(arrMs, folgaMin, tipo, count = 12) {
       if (out.length >= count) return;
       const at = opStartMs(k) + sg.t * 60000;
       if (at < minAt - 30000 || out.some((o) => o.k === k && o.t === sg.t)) return;
+      const endOk = opOpen(at + (dur - 1) * 60000);
       out.push({ k, s: sg.slot, idx: sg.i, at, t: sg.t, shifted: sg.shifted, cause: sg.cause, room: sg.room, next: sg.next,
-        fits: !sg.tight && sg.fitsDay, tight: sg.tight, fitsDay: sg.fitsDay, wait: (at - arrMs) / 60000 });
+        fits: !sg.tight && endOk, tight: sg.tight, fitsDay: endOk, wait: (at - arrMs) / 60000 });
     });
   }
   return out;
+}
+// envases reais (em ms absolutos) ao redor de um instante — atravessa a virada dos dias de operação
+function realIntervalsAround(ms) {
+  const out = [];
+  for (let i = -2; i <= 4; i++) {
+    const d = addDays(new Date(ms), i);
+    if (!isOpDay(d)) continue;
+    const k = keyOf(d);
+    schedule(k).items.forEach((x) => out.push({ s: opStartMs(k) + x.s * 60000, e: opStartMs(k) + x.en * 60000, m: x.e.material }));
+  }
+  return out;
+}
+const ceil5 = (ms) => Math.ceil(ms / 300000) * 300000;
+const opOpen = (ms) => !!opDayOfMs(ms);
+// horários fora da lista: na chegada (com folga) e cada momento em que a linha libera depois dela
+function lineCandidates(arrMs, folgaMin, durMinutes) {
+  const minAt = arrMs + folgaMin * 60000;
+  const items = realIntervalsAround(minAt);
+  const starts = [ceil5(minAt), ...items.filter((it) => it.e > minAt).map((it) => ceil5(it.e))];
+  const out = [];
+  starts.forEach((p, idx) => {
+    let t = p, cause = idx === 0 ? '' : '';
+    for (let moved = true; moved;) {
+      moved = false;
+      for (const it of items) if (it.s <= t + 30000 && it.e > t + 30000) { t = ceil5(it.e); cause = it.m; moved = true; }
+    }
+    if (!opOpen(t) || out.some((o) => o.at === t)) return;
+    const next = items.filter((it) => it.s > t + 30000).sort((a, b) => a.s - b.s)[0];
+    const room = next ? (next.s - t) / 60000 : Infinity;
+    const endOk = opOpen(t + (durMinutes - 1) * 60000);
+    const k = opDayOfMs(t);
+    out.push({ imp: true, first: idx === 0, k, at: t, t: Math.round(msToOp(k, t)), cause, room, next: next?.m,
+      tight: room < durMinutes - 1, fitsDay: endOk, fits: room >= durMinutes - 1 && endOk, wait: (t - arrMs) / 60000 });
+  });
+  return out.sort((a, b) => a.at - b.at);
 }
 let calc = null;
 function initCalc() {
   if (calc) return;
   const n = new Date();
   const org = origins().find((o) => o.id === S.settings.calcOrg) || origins()[0];
-  calc = { org: org?.id || '', h: org?.h ?? 12, date: keyOf(n), time: `${pad(n.getHours())}:${pad(n.getMinutes())}`, tipo: 'padrao', folga: 0 };
+  calc = { org: org?.id || '', h: org?.h ?? 12, date: keyOf(n), time: `${pad(n.getHours())}:${pad(n.getMinutes())}`, tipo: 'padrao', folga: 0, imp: S.settings.calcImp !== false };
 }
 function calcTimes() {
   const [y, m, d] = calc.date.split('-').map(Number);
@@ -1354,6 +1406,10 @@ function renderPercurso() {
       <label>Folga após a chegada
         <select id="cFolga">${[0, 30, 60, 90, 120].map((m) => `<option value="${m}" ${m === calc.folga ? 'selected' : ''}>${m ? untilText(m) : 'Nenhuma'}</option>`).join('')}</select>
       </label>
+      <label class="switch span-2 calc-switch">
+        <input type="checkbox" id="cImp" ${calc.imp ? 'checked' : ''}><span class="knob"></span>
+        <div><b>Incluir horários fora da lista</b><small>Sugere começar na chegada ou assim que a linha liberar (horário imprevisto)</small></div>
+      </label>
     </div>
     <details class="org-manage">
       <summary>${I.gear}Gerenciar origens</summary>
@@ -1372,35 +1428,58 @@ function renderCalcOut() {
   const org = origins().find((o) => o.id === calc.org);
   const valid = isFinite(dep) && calc.h > 0;
   if (!valid) { $('#pcOut').innerHTML = '<div class="empty">Informe a saída e o tempo de viagem.</div>'; return; }
-  const wins = windowsAfter(arr, calc.folga, calc.tipo);
+  const dur = calc.tipo === 'tambor' ? 360 : durMin({ tipo: calc.tipo, dur: 'auto', janelas: 'auto' });
+  // janelas da lista (sem as reajustadas quando "só lista")
+  let wins = windowsAfter(arr, calc.folga, calc.tipo, 14).filter((w) => calc.imp || !w.shifted);
+  const bestWin = wins.find((w) => w.fits && !w.shifted);
+  if (calc.imp) {
+    const lc = lineCandidates(arr, calc.folga, dur);
+    const firstFitWin = wins.find((w) => w.fits);
+    // mostra o horário da chegada sempre; os outros só se forem mais cedo que a primeira janela que serve
+    lc.forEach((c) => {
+      if (wins.some((w) => Math.abs(w.at - c.at) < 5 * 60000)) return;
+      if (c.first || (c.fits && (!firstFitWin || c.at < firstFitWin.at))) wins.push(c);
+    });
+    wins.sort((x, y) => x.at - y.at);
+  }
   const best = wins.find((w) => w.fits);
   const arrOpK = opDayOfMs(arr);
   const nowP = Math.max(0, Math.min(1, (Date.now() - dep) / (arr - dep)));
   let lastK = null;
   const rows = wins.map((w) => {
     const date = new Date(w.at);
+    const turnoIdx = w.s ? w.s.turno : SLOTS[slotIndexForOp(w.t)].turno;
     let head = '';
     if (w.k !== lastK) { lastK = w.k; head = `<div class="win-day">${I.calCheck}Dia de operação · ${esc(fmtLong(fromKey(w.k)))}</div>`; }
-    const st = w.fits ? (w.shifted ? 'Livre (reajustado)' : 'Livre') : !w.fitsDay ? 'Termina depois das 07:15' : `Só ${untilText(w.room)} até ${w.next}`;
-    return `${head}<div class="win ${w.fits ? 'ok' : 'no'} ${best === w ? 'best' : ''} turno-c${w.s.turno}">
+    let st, note;
+    if (w.imp) {
+      st = w.fits ? (w.first && !w.cause ? 'Na chegada' : 'Linha libera') : !w.fitsDay ? 'Passa do fim da operação' : `Só ${untilText(w.room)} até ${esc(w.next)}`;
+      note = `Fora da lista (imprevisto)${w.cause ? ` · depois de ${esc(w.cause)}` : ''}`;
+    } else {
+      st = w.fits ? (w.shifted ? 'Livre (reajustado)' : 'Livre') : !w.fitsDay ? 'Termina depois das 07:15' : `Só ${untilText(w.room)} até ${esc(w.next)}`;
+      note = `${TURNOS[w.s.turno].n}${w.shifted ? ` · janela ${w.s.t} ocupada até ${opToHHMM(w.t)}${w.cause ? ' (' + esc(w.cause) + ')' : ''}` : ' · janela da lista'}`;
+    }
+    const badges = (best === w ? `<span class="best-badge">${I.crown}Melhor opção</span>` : '') + (bestWin === w && best !== w ? `<span class="best-badge list">${I.clock}Melhor da lista</span>` : '');
+    const atAttr = w.imp || w.shifted ? w.t : '';
+    return `${head}<div class="win ${w.fits ? 'ok' : 'no'} ${best === w ? 'best' : ''} ${bestWin === w && best !== w ? 'best-list' : ''} ${w.imp ? 'imp' : ''} turno-c${turnoIdx}">
       <div class="win-time"><b>${opToHHMM(w.t)}</b><small>${fmtShort(date)}</small></div>
       <div class="win-info">
-        <div><span class="win-st">${st}</span>${best === w ? '<span class="best-badge">' + I.crown + 'Melhor opção</span>' : ''}</div>
-        <small>${TURNOS[w.s.turno].n}${w.shifted ? ` · janela ${w.s.t} ocupada até ${opToHHMM(w.t)}${w.cause ? ' (' + esc(w.cause) + ')' : ''}` : ''} · ${w.wait < 1 ? 'chega na hora' : 'espera ' + untilText(w.wait)} após a chegada</small>
+        <div><span class="win-st">${st}</span>${badges}</div>
+        <small>${note} · ${w.wait < 1 ? 'sem espera' : 'espera ' + untilText(w.wait)}</small>
       </div>
-      <button class="btn btn-sm ${w.fits ? 'btn-primary' : 'btn-ghost'}" data-calc-sched="${w.k}|${w.s.id}|${w.shifted ? w.t : ''}">${I.plus}Agendar</button>
+      <button class="btn btn-sm ${w.fits ? 'btn-primary' : 'btn-ghost'}" data-calc-sched="${w.k}|${w.s ? w.s.id : ''}|${atAttr}">${I.plus}Agendar</button>
     </div>`;
   }).join('');
+  const bestTxt = best ? `melhor: <b>${opToHHMM(best.t)}</b> de ${fmtShort(new Date(best.at))}${best.wait >= 1 ? ` (espera ${untilText(best.wait)})` : ' (sem espera)'}` : 'nenhum horário livre nos próximos dias';
   $('#pcOut').innerHTML = `
     <div class="route-card">
       <div class="route-pt"><small>Saída · ${esc(org?.n || 'Origem')}</small><b>${fmtTime(dep)}</b><em>${fmtShort(new Date(dep))}</em></div>
       <div class="route-line"><i style="--p:${nowP * 100}%"></i><span class="route-truck" style="left:${nowP * 100}%">${I.truck}</span><small>${fmtNum(calc.h)} h de viagem</small></div>
       <div class="route-pt end"><small>Chegada prevista</small><b>${fmtTime(arr)}</b><em>${fmtShort(new Date(arr))}</em></div>
     </div>
-    ${!arrOpK ? '<div class="banner" style="margin-top:12px">Chega fora do horário de operação (fim de semana). As janelas abaixo são da próxima operação.</div>' : ''}
-    <div class="card-head" style="margin:18px 0 10px"><div><h2><span class="h-ico">${I.clock}</span>Janelas possíveis</h2><p class="muted">${calc.folga ? `Com ${untilText(calc.folga)} de folga · ` : ''}${esc(TYPES[calc.tipo].n)} · ${best ? `melhor: <b>${best.s.t}</b> de ${fmtShort(new Date(best.at))}` : 'nenhuma janela livre nos próximos dias'}</p></div></div>
-    <div class="win-list">${rows || '<div class="empty">Nenhuma janela encontrada.</div>'}</div>
-    ${arrOpK ? `<button class="btn btn-ghost calc-imp" data-calc-imp>${I.alarm}Agendar como horário imprevisto na chegada (${fmtTime(arr)})</button>` : ''}`;
+    ${!arrOpK ? '<div class="banner" style="margin-top:12px">Chega fora do horário de operação (fim de semana). Os horários abaixo são da próxima operação.</div>' : ''}
+    <div class="card-head" style="margin:18px 0 10px"><div><h2><span class="h-ico">${I.clock}</span>Horários possíveis</h2><p class="muted" id="calcSummary">${calc.folga ? `Com ${untilText(calc.folga)} de folga · ` : ''}${esc(TYPES[calc.tipo].n)} (${untilText(dur)}) · ${bestTxt}</p></div></div>
+    <div class="win-list">${rows || '<div class="empty">Nenhum horário encontrado.</div>'}</div>`;
 }
 function renderTransit() {
   const list = transitTrucks();
@@ -1435,6 +1514,7 @@ document.addEventListener('change', (ev) => {
   if (t.id === 'cOrg') { calc.org = t.value; calc.h = origins().find((o) => o.id === t.value)?.h ?? calc.h; S.settings.calcOrg = t.value; save(); $('#cH').value = String(calc.h).replace('.', ','); }
   if (t.id === 'cTipo') calc.tipo = t.value;
   if (t.id === 'cFolga') calc.folga = Number(t.value);
+  if (t.id === 'cImp') { calc.imp = t.checked; S.settings.calcImp = t.checked; save(); }
   if (t.id === 'cDate' && t.value) calc.date = t.value;
   if (t.id === 'cTime' && t.value) calc.time = t.value;
   renderCalcOut();
@@ -1763,7 +1843,7 @@ document.addEventListener('click', (ev) => {
   if ((el = c('[data-calc-sched]'))) {
     const [k, slotId, at] = el.dataset.calcSched.split('|');
     const { dep } = calcTimes();
-    if (at) return openEnv(k, null, '__imp', { tipo: calc.tipo, origem: calc.org, saida: dep, viagemH: calc.h, hora: Number(at) });
+    if (at !== '' && at != null) return openEnv(k, null, '__imp', { tipo: calc.tipo, origem: calc.org, saida: dep, viagemH: calc.h, hora: Number(at) });
     return openEnv(k, null, slotId, { tipo: calc.tipo, origem: calc.org, saida: dep, viagemH: calc.h });
   }
   if (c('[data-calc-imp]')) {
@@ -1976,7 +2056,7 @@ function updatePercPreview() {
   if (k && planned != null) {
     const diff = (arr - (opStartMs(k) + planned * 60000)) / 60000;
     if (diff > 1) { txt += ` · ${fmtDelta(diff)} depois do horário agendado!`; cls = 'perc-prev bad'; }
-    else txt += ` · ${untilText(-diff)} antes do horário ✓`;
+    else txt += -diff < 1 ? ' · chega bem na hora ✓' : ` · ${untilText(-diff)} antes do horário ✓`;
   }
   el.textContent = txt; el.className = cls;
 }

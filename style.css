@@ -1413,3 +1413,10 @@ kbd {
 .slot-add.shifted small { display: block; font-size: 11.5px; font-weight: 500; color: var(--muted); margin-top: 1px; }
 .free-slot.shifted { color: var(--j-sky); border-color: color-mix(in srgb, var(--j-sky) 50%, transparent); display: inline-flex; gap: 5px; align-items: baseline; }
 .free-slot.shifted small { font-size: 10.5px; color: var(--muted); text-decoration: line-through; }
+
+.calc-switch { margin-top: 4px; }
+.best-badge.list { color: var(--gold); background: transparent; border: 1px solid var(--line-2); }
+.win.best-list { border-color: var(--line-2); }
+.win.imp { --tcol: var(--j-sky); }
+.win.imp .win-time b { color: var(--j-sky); }
+.win.best.imp .win-time b { color: var(--gold); }
