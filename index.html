@@ -14,12 +14,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=11">
+  <link rel="stylesheet" href="style.css?v=18">
   <script>
     // aplica tema e preferências antes de desenhar (evita "piscar")
     (function () {
       var r = document.documentElement, st = {};
-      try { st = (JSON.parse(localStorage.getItem('filling-painel-v1') || '{}').settings) || {}; } catch (e) {}
+      try {
+        var v = JSON.parse(localStorage.getItem('filling-cofre-v1') || 'null');
+        if (v && v.data && v.users && v.users.length) { st = v.meta || {}; r.classList.add('is-locked'); }
+        else st = (JSON.parse(localStorage.getItem('filling-painel-v1') || '{}').settings) || {};
+      } catch (e) {}
       var t = st.theme || 'dark';
       if (t === 'auto') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
       r.dataset.theme = t;
@@ -54,11 +58,14 @@
       <button class="tab-btn" data-tab="preparo"><span data-ic="clipboard"></span>Preparo</button>
       <button class="tab-btn" data-tab="percurso"><span data-ic="route"></span>Percurso</button>
       <button class="tab-btn" data-tab="historico"><span data-ic="chart"></span>Histórico</button>
+      <button class="tab-btn" data-tab="materiais"><span data-ic="package"></span>Materiais</button>
     </nav>
 
     <div class="top-actions">
       <div class="clock" id="clock" aria-live="polite"></div>
+      <button class="icon-btn search-btn" data-open-search title="Buscar (/)" aria-label="Buscar"><span data-ic="search"></span><span class="sb-label">Buscar</span><kbd>/</kbd></button>
       <button class="icon-btn hide-mobile" data-open-keys title="Atalhos do teclado (?)" aria-label="Atalhos do teclado"><span data-ic="keyboard"></span></button>
+ <button class="icon-btn" id="lockBtn" hidden title="Bloquear (L)" aria-label="Bloquear o painel"><span data-ic="lock"></span></button>
       <button class="icon-btn" id="themeBtn" title="Alternar tema" aria-label="Alternar tema"><span data-ic="moon"></span>
       </button>
       <button class="icon-btn" id="settingsBtn" title="Configurações e backup" aria-label="Configurações"><span data-ic="gear"></span>
@@ -69,11 +76,12 @@
   <main>
     <!-- ================= HOJE ================= -->
     <section class="view" id="view-hoje" hidden>
+      <div id="catRemind" hidden></div>
       <div class="hero" id="hero"></div>
       <div class="next-step" id="nextStep"></div>
 
-      <div class="grid-2">
-        <div class="col">
+      <div class="grid-hoje">
+        <div class="col col-a">
           <section class="card">
             <div class="card-head">
               <div>
@@ -90,7 +98,7 @@
           </section>
         </div>
 
-        <div class="col">
+        <div class="col col-b">
           <section class="card">
             <div class="card-head">
               <div>
@@ -101,6 +109,8 @@
             </div>
             <div id="todayTrucks"></div>
           </section>
+        </div>
+        <div class="col col-c">
 
           <section class="card">
             <div class="card-head">
@@ -142,6 +152,18 @@
       </div>
 
       <div class="day-picker" id="agDays"></div>
+      <div class="ag-toolbar">
+        <div class="seg view-seg" role="tablist" aria-label="Visão da agenda">
+          <button data-ag-view="compact"><span data-ic="layers"></span>Resumida</button>
+          <button data-ag-view="full"><span data-ic="clipboard"></span>Detalhada</button>
+        </div>
+        <div class="ag-legend">
+          <span><i class="lg st-programado"></i>Programado</span>
+          <span><i class="lg st-chegou"></i>Chegou</span>
+          <span><i class="lg st-envasando"></i>Envasando</span>
+          <span><i class="lg st-concluido"></i>Concluído</span>
+        </div>
+      </div>
       <div class="banner" id="agBanner" hidden></div>
 
       <section class="card ruler-card">
@@ -206,6 +228,29 @@
       <section class="card" id="pcTransit" style="margin-top:20px"></section>
     </section>
 
+    <!-- ================= MATERIAIS ================= -->
+    <section class="view" id="view-materiais" hidden>
+      <div class="page-top">
+        <div>
+          <span class="eyebrow">Planilha de embalagens</span>
+          <h1 class="title">Materiais</h1>
+          <p class="muted">Digite o código do material e veja a embalagem e o código dela</p>
+        </div>
+        <button class="btn btn-primary" data-cat-import><span data-ic="download"></span>Importar planilha</button>
+      </div>
+      <div id="catStatus"></div>
+      <section class="card cat-search-card" id="catSearchCard" hidden>
+        <div class="cat-search">
+          <span data-ic="search"></span>
+          <input id="catQ" type="search" inputmode="search" autocomplete="off" spellcheck="false" placeholder="Código do material, da embalagem ou parte do nome…" aria-label="Buscar na planilha">
+          <button type="button" class="icon-btn" id="catClear" hidden aria-label="Limpar"><span data-ic="x"></span></button>
+        </div>
+        <div class="cat-filters" id="catFilters"></div>
+      </section>
+      <div id="catOut"></div>
+      <input type="file" id="catFile" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" hidden>
+    </section>
+
     <!-- ================= HISTÓRICO ================= -->
     <section class="view" id="view-historico" hidden>
       <div class="page-top">
@@ -243,6 +288,10 @@
       <span data-ic="chart"></span>
       <span>Histórico</span>
     </button>
+    <button class="tab-btn" data-tab="materiais">
+      <span data-ic="package"></span>
+      <span>Materiais</span>
+    </button>
   </nav>
 
   <!-- ================= DIÁLOGO: CAMINHÃO ================= -->
@@ -262,6 +311,7 @@
           <input name="material" required maxlength="80" list="matList" placeholder="Ex.: Acronal 1569">
           <datalist id="matList"></datalist>
         </label>
+        <div class="span-2 cat-hint" id="catHint" hidden></div>
         <label>Tipo de envase
           <select name="tipo"></select>
         </label>
@@ -423,8 +473,9 @@
         <div><strong>Seu nome</strong><p class="muted">Para a saudação da tela Hoje</p></div>
         <input type="text" id="nameInput" maxlength="30" placeholder="Ex.: Lelouch" class="name-input">
       </div>
+      <div class="set-block sec-block" id="secBlock"></div>
       <div class="set-row">
-        <div><strong>Backup</strong><p class="muted">Os dados ficam salvos neste navegador. Exporte para levar a outro aparelho.</p></div>
+        <div><strong>Backup</strong><p class="muted">Os dados ficam salvos neste navegador. Exporte para levar a outro aparelho (com a proteção ativa, o arquivo sai cifrado).</p></div>
         <div class="set-actions">
           <button class="btn btn-ghost" id="exportBtn">Exportar</button>
           <label class="btn btn-ghost">Importar<input type="file" id="importInput" accept="application/json,.json" hidden></label>
@@ -446,7 +497,51 @@
     </div>
   </dialog>
 
+  <!-- ================= DIÁLOGO: BUSCA ================= -->
+  <dialog id="searchDlg" class="sheet search-sheet">
+    <div class="search-head">
+      <span data-ic="search"></span>
+      <input id="searchInput" type="search" placeholder="Material, código, ordem, lote, ticket…" autocomplete="off" enterkeyhint="search" aria-label="Buscar caminhões">
+      <button type="button" class="icon-btn" data-close aria-label="Fechar"><span data-ic="x"></span></button>
+    </div>
+    <div class="search-results" id="searchResults"></div>
+  </dialog>
+
+  <!-- ================= DIÁLOGO: COPIAR PROGRAMAÇÃO ================= -->
+  <dialog id="copyDlg" class="sheet">
+    <div class="sheet-head">
+      <div>
+        <span class="eyebrow">Agenda</span>
+        <h2>Copiar programação</h2>
+      </div>
+      <button type="button" class="icon-btn" data-close aria-label="Fechar"><span data-ic="x"></span></button>
+    </div>
+    <div class="adj" id="copyBody"></div>
+  </dialog>
+
   <!-- ================= DIÁLOGO: ATALHOS ================= -->
+  <dialog id="secDlg" class="sheet">
+    <div class="sheet-head">
+      <div>
+        <span class="eyebrow" id="secEyebrow">Segurança</span>
+        <h2 id="secTitle"></h2>
+      </div>
+      <button type="button" class="icon-btn" data-close aria-label="Fechar">
+        <span data-ic="x"></span>
+      </button>
+    </div>
+    <div class="sec-body" id="secBody"></div>
+  </dialog>
+
+  <div id="lock" class="lock" hidden>
+    <div class="lock-card">
+      <div class="lock-crest"><img src="icons/icon.svg" width="76" height="76" alt=""></div>
+      <strong class="lock-title">Filling</strong>
+      <p class="lock-sub" id="lockSub">Painel protegido</p>
+      <div id="lockBody"></div>
+    </div>
+  </div>
+
   <dialog id="keysDlg" class="sheet keys-sheet">
     <div class="sheet-head">
       <div>
@@ -458,7 +553,7 @@
     <div class="keys">
       <div class="keys-col">
         <h4>Navegar</h4>
-        <p><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd><kbd>5</kbd><span>Hoje · Agenda · Preparo · Percurso · Histórico</span></p>
+        <p><kbd>1</kbd><kbd>…</kbd><kbd>6</kbd><span>Hoje · Agenda · Preparo · Percurso · Histórico · Materiais</span></p>
         <p><kbd>←</kbd><kbd>→</kbd><span>Dia anterior / próximo (Agenda e Preparo)</span></p>
         <p><kbd>H</kbd><span>Voltar para o dia de hoje</span></p>
         <h4>Sequência</h4>
@@ -468,13 +563,16 @@
       </div>
       <div class="keys-col">
         <h4>Caminhões</h4>
+        <p><kbd>/</kbd><kbd>B</kbd><span>Buscar material, lote, ordem, ticket</span></p>
         <p><kbd>N</kbd><span>Novo caminhão</span></p>
+        <p><kbd>V</kbd><span>Agenda resumida / detalhada</span></p>
         <p><kbd>I</kbd><span>Novo horário imprevisto</span></p>
         <p><kbd>R</kbd><span>Registrar chegada / iniciar / finalizar o próximo</span></p>
         <p><kbd>A</kbd><span>Ajustar horário do próximo caminhão</span></p>
         <h4>Geral</h4>
         <p><kbd>T</kbd><span>Alternar tema claro / escuro</span></p>
         <p><kbd>,</kbd><span>Configurações</span></p>
+        <p><kbd>L</kbd><span>Bloquear o painel</span></p>
         <p><kbd>Ctrl</kbd><kbd>Enter</kbd><span>Salvar a janela aberta</span></p>
         <p><kbd>Esc</kbd><span>Fechar a janela</span></p>
         <p><kbd>?</kbd><span>Mostrar estes atalhos</span></p>
@@ -484,6 +582,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=18"></script>
 </body>
 </html>
