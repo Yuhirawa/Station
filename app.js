@@ -126,12 +126,8 @@ const TYPES = {
   tambor: { n: 'Tambor / Bombona', mono: 'TB', ic: 'drum', w: 2, dur: 6, leg: '2 janelas (≈ 6 h) · pode ajustar para 3', hint: 'Tambor/bombona ocupa 2 janelas (≈ 6 h) em qualquer horário. Se precisar de 3, mude em "Janelas ocupadas" — a duração acompanha.' },
 };
 
-const STATUS = { programado: 'Programado', chegou: 'Chegou', envasando: 'Envasando', concluido: 'Concluído', cancelado: 'Cancelado' };
-const FLOW = {
-  programado: { act: 'Registrar chegada', short: 'Chegou', icon: I.truck, next: 'chegou', t: 'chegada' },
-  chegou: { act: 'Iniciar envase', short: 'Iniciar', icon: I.play, next: 'envasando', t: 'inicio' },
-  envasando: { act: 'Finalizar envase', short: 'Finalizar', icon: I.flag, next: 'concluido', t: 'fim' },
-};
+const STATUS = { programado: 'Aguardando', veio: 'Veio', naoveio: 'Não veio', cancelado: 'Cancelado' };
+const OLD_VEIO = ['chegou', 'envasando', 'concluido'];
 const MOTIVOS = ['Atraso do veículo', 'Atraso na operação', 'Limpeza de linha', 'Material viscoso', 'Antecipado', 'Outro'];
 
 /* ================= Datas e horários ================= */
@@ -249,6 +245,7 @@ function blank() { return { days: {}, plan: {}, settings: { theme: 'dark', prepM
 function migrate(s) {
   Object.values(s.plan || {}).forEach((list) => list.forEach((e) => {
     if (e.status === 'atrasado') e.status = 'programado';
+    if (OLD_VEIO.includes(e.status)) { e.status = 'veio'; e.t ||= {}; e.t.veio ||= e.t.chegada || e.t.inicio || e.t.fim || e.created || Date.now(); }
     if (!e.reps && e.repQtd) { e.reps = [{ qtd: e.repQtd, un: e.repUn || 'kg', lote: '' }]; }
     delete e.repQtd; delete e.repUn;
     e.t ||= {};
@@ -281,7 +278,8 @@ const EMPTY_DAY = () => ({ checks: {}, routine: {}, extras: [], notes: '' });
 const getDay = (k) => S.days[k] || EMPTY_DAY();
 const ensureDay = (k) => (S.days[k] ||= EMPTY_DAY());
 const getPlan = (k) => S.plan[k] || [];
-const active = (list) => list.filter((e) => e.status !== 'cancelado');
+const active = (list) => list.filter((e) => e.status !== 'cancelado' && e.status !== 'naoveio');
+const isNoShow = (e) => e.status === 'naoveio';
 const findTruck = (k, id) => getPlan(k).find((e) => e.id === id);
 
 /* ================= Caminhões: janelas e horários ================= */
@@ -365,6 +363,7 @@ function infoChips(e, k) {
   const tr = transitInfo(e, k);
   if (tr) out.push(`<span class="ichip transit ${tr.late > 0 ? 'late' : ''}" title="Saiu ${fmtDayTime(e.saida)}">${I.route}${esc(e.origemN || 'Percurso')} · ${tr.arrived ? 'previsto' : 'chega'} ${fmtDayTime(tr.arr)}${tr.late > 0 ? ` · ${fmtDelta(tr.late)} após a janela` : ''}</span>`);
   if (e.peso) out.push(copyChip('peso', I.weight, 'Peso', fmt3(e.peso)));
+  if (e.semRep && !getReps(e).length) out.push(`<span class="ichip norep">${I.check}Sem reprocesso</span>`);
   getReps(e).forEach((r) => {
     if (r.qtd) out.push(copyChip('rep', I.recycle, 'Reprocesso', fmt3(r.qtd), ` ${esc(r.un || 'kg')}`));
     if (r.lote) out.push(copyChip('rep rep-lote', I.hash, 'Lote reproc.', r.lote));
@@ -414,6 +413,11 @@ function layout(list) {
   let used = 0;
   list.forEach((e) => {
     if (e.status === 'cancelado') { cancelled.push(e); return; }
+    if (e.status === 'naoveio') {
+      const j = effSlotIdx(e);
+      if (j >= 0) occ[j].items.push({ e, take: 0, cont: false, ns: true }); else unassigned.push(e);
+      return;
+    }
     const w = weightOf(e);
     used += w;
     const i0 = effSlotIdx(e);
@@ -452,7 +456,7 @@ function cascadeList(list, k, fromId) {
   const aff = [];
   for (let j = i + 1; j < items.length; j++) {
     const e = items[j].e;
-    if (e.t?.inicio || e.status === 'concluido') { prevEnd = Math.max(prevEnd, endOp(e, k)); continue; }
+    if (e.t?.fim) { prevEnd = Math.max(prevEnd, endOp(e, k)); continue; }
     if (startOp(e, k) < prevEnd - 0.5) {
       e.ajuste = Math.round(prevEnd);
       if (!e.motivo) e.motivo = 'Empurrado pelo anterior';
@@ -642,14 +646,16 @@ function toast(msg, action, fn) {
 }
 
 // tema (Noite Real, Pergaminho, Carmesim, Cavaleiro), cor de destaque, densidade e tamanho da letra
+const LIGHT_THEMES = ['light', 'sage', 'sakura', 'winter'];
+const THEME_ACCENT = { knight: 'silver', midnight: 'silver', winter: 'silver', sakura: 'ruby' };
 function applyTheme() {
   const st = S.settings;
   let t = st.theme || 'dark';
   if (t === 'auto') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
   const root = document.documentElement;
   root.dataset.theme = t;
-  root.dataset.mode = t === 'light' ? 'light' : 'dark';
-  root.dataset.accent = !st.accent || st.accent === 'auto' ? (t === 'knight' ? 'silver' : 'gold') : st.accent;
+  root.dataset.mode = LIGHT_THEMES.includes(t) ? 'light' : 'dark';
+  root.dataset.accent = !st.accent || st.accent === 'auto' ? (THEME_ACCENT[t] || 'gold') : st.accent;
   root.dataset.density = st.density || 'comfort';
   root.dataset.font = st.font || 'M';
   const bg = getComputedStyle(root).getPropertyValue('--bg').trim();
@@ -682,13 +688,12 @@ function nextTruckInfo() {
   if (!k) return null;
   const now = nowOp(k);
   const items = schedule(k).items;
-  const running = items.find((x) => x.e.status === 'envasando');
-  const nextT = items.find((x) => x.e.status === 'programado' || x.e.status === 'chegou');
+  const running = items.find((x) => x.e.status === 'veio' && x.s <= now && now < x.en);
+  const nextT = items.find((x) => x.e.status === 'programado' && x.en > now - 180);
   return { k, now, running, nextT };
 }
 // texto de quando o próximo caminhão entra: "em 2h10", "agora" ou "na fila para envase"
 function whenText(x, now) {
-  if (x.e.status === 'chegou') return 'na fila para envase';
   const d = x.s - now;
   return d <= 1 ? 'agora' : 'em ' + untilText(d);
 }
@@ -715,7 +720,7 @@ function renderHero() {
   }).join('');
   let chips = '';
   const nt = nextTruckInfo();
-  if (nt?.running) chips += `<span class="chip live"><span class="dot-live"></span>Envasando · ${esc(matName(nt.running.e))} · término ~${opToHHMM(nt.running.en)}</span>`;
+  if (nt?.running) chips += `<span class="chip live"><span class="dot-live"></span>Na linha · ${esc(matName(nt.running.e))} · até ~${opToHHMM(nt.running.en)}</span>`;
   if (nt?.nextT) {
     const x = nt.nextT;
     const late = lateNoShow(x.e, nt.k);
@@ -755,8 +760,10 @@ function renderHero() {
 function heroStats() {
   const k = currentOpDayKey() || todayKey();
   const act = active(getPlan(k));
-  const concl = act.filter((e) => e.status === 'concluido').length;
-  const now = act.find((e) => e.status === 'envasando');
+  const concl = act.filter((e) => e.status === 'veio').length;
+  const nsN = getPlan(k).filter(isNoShow).length;
+  const nti = nextTruckInfo();
+  const now = nti && nti.k === k && nti.running ? nti.running.e : null;
   const trs = transitTrucks().filter((x) => x.arr > Date.now()).length;
   const pk = keyOf(nextOpDay(new Date()));
   const tom = active(getPlan(pk));
@@ -764,8 +771,8 @@ function heroStats() {
   const tile = (goto, day, icon, label, value, sub, cls = '') =>
     `<button class="hs-tile ${cls}" data-goto="${goto}" data-day="${day}"><span class="hs-ico">${icon}</span><small>${label}</small><b>${value}</b><em>${sub}</em></button>`;
   return `<div class="hero-stats">
-    ${tile('agenda', k, I.truck, 'Caminhões hoje', act.length, act.length ? `${concl} concluído${concl === 1 ? '' : 's'}` : 'nenhum agendado')}
-    ${tile('agenda', k, I.play, 'Na linha agora', now ? esc(matName(now)) : '—', now ? `desde ${fmtTime(now.t.inicio)}` : 'linha livre', now ? 'live' : '')}
+    ${tile('agenda', k, I.truck, 'Caminhões hoje', act.length, act.length || nsN ? `${concl} ${concl === 1 ? 'veio' : 'vieram'}${nsN ? ` · ${nsN} não ${nsN === 1 ? 'veio' : 'vieram'}` : ''}` : 'nenhum agendado')}
+    ${tile('agenda', k, I.play, 'Na linha agora', now ? esc(matName(now)) : '—', now ? `até ~${opToHHMM(nti.running.en)}` : 'linha livre', now ? 'live' : '')}
     ${tile('percurso', '', I.route, 'Em trânsito', trs, trs ? 'a caminho' : 'nenhum')}
     ${tile('preparo', pk, I.clipboard, `Preparo ${fmtShort(fromKey(pk))}`, prepT ? `${Math.round((prepD / prepT) * 100)}%` : '—', prepT ? `${prepD}/${prepT} etapas` : 'sem caminhões')}
   </div>`;
@@ -930,13 +937,20 @@ function renderRotina() {
   $('#rotCount').className = 'pill' + (daily.every((r) => day.routine[r.id]?.at) ? ' ok' : '');
 }
 
+// Veio / Não veio (um único controle)
 function actionBtn(e, k, small) {
-  const f = FLOW[e.status];
-  if (!f) return '';
-  return `<button class="btn btn-primary ${small ? 'btn-sm' : ''}" data-advance="${e.id}" data-day="${k}">${f.icon}${small ? f.short : f.act}</button>`;
+  const sm = small ? 'btn-sm' : '';
+  if (e.status === 'programado') return `<span class="arrive">
+    <button type="button" class="btn btn-veio ${sm}" data-veio="${e.id}" data-day="${k}" title="O caminhão veio (atalho R)">${I.check}Veio</button>
+    <button type="button" class="btn btn-naoveio ${sm}" data-naoveio="${e.id}" data-day="${k}" title="O caminhão não veio — fica guardado para reagendar">${I.x}Não veio</button></span>`;
+  if (e.status === 'naoveio') return `<span class="arrive">
+    <button type="button" class="btn btn-veio ${sm}" data-veio="${e.id}" data-day="${k}">${I.check}${small ? 'Veio' : 'Veio afinal'}</button>
+    <button type="button" class="btn btn-reag ${sm}" data-reag="${e.id}" data-day="${k}">${I.calClock}Reagendar</button></span>`;
+  if (e.status === 'veio') return `<span class="veio-badge" title="Confirmado${e.t?.veio ? ' às ' + fmtTime(e.t.veio) : ''}">${I.check}<b>Veio</b>${e.t?.veio ? `<small>${fmtTime(e.t.veio)}</small>` : ''}</span>`;
+  return '';
 }
 function adjustBtn(e, k, small) {
-  if (e.status === 'concluido' || e.status === 'cancelado') return '';
+  if (e.status === 'naoveio' || e.status === 'cancelado') return '';
   const lbl = e.t?.inicio ? 'Ajustar término' : 'Ajustar horário';
   return `<button class="btn btn-ghost ${small ? 'btn-sm' : ''}" data-adjust="${e.id}" data-day="${k}">${I.clock}${small ? 'Ajustar' : lbl}</button>`;
 }
@@ -946,7 +960,7 @@ function renderTodayTrucks() {
   const sch = schedule(k);
   const list = sortPlan(getPlan(k), k);
   const box = $('#todayTrucks');
-  $('#todaySub').textContent = `${fmtShort(fromKey(k))} · chegada, envase e ajustes de horário`;
+  $('#todaySub').textContent = `${fmtShort(fromKey(k))} · confirme quem veio e ajuste horários`;
   if (!list.length) {
     box.innerHTML = `<div class="empty">Nenhum caminhão programado para ${fmtShort(fromKey(k))}.<br>
       <button class="btn btn-ghost btn-sm" data-goto="agenda" data-day="${k}">${I.plus} Programar</button></div>`;
@@ -965,7 +979,7 @@ function renderTodayTrucks() {
     const ov = sch.overlaps.find((x) => x.e.id === e.id);
     const sub = '';
     const chips = infoChips(e, k);
-    const times = [e.t?.chegada && `chegou ${fmtTime(e.t.chegada)}`, e.t?.inicio && `início ${fmtTime(e.t.inicio)}`, e.t?.fim && `fim ${fmtTime(e.t.fim)}`].filter(Boolean).join(' · ');
+    const times = [e.t?.veio && e.status === 'veio' && `confirmado ${fmtTime(e.t.veio)}`, e.status === 'naoveio' && 'não veio · aguardando reagendar'].filter(Boolean).join(' · ');
     return `<div class="truck-row st-${e.status}">
       <div class="tr-time ${adjusted ? 'adjusted' : ''}">
         <b>${s != null ? opToHHMM(s) : '—'}</b>${adjusted ? `<s>${opToHHMM(p)}</s>` : `<small>${slotLabel(e)}</small>`}
@@ -974,7 +988,7 @@ function renderTodayTrucks() {
         <div class="tr-top">${mono(e)}<span class="tr-mat" data-edit="${e.id}" data-day="${k}">${esc(matName(e))}</span>${statusPill(e)}${adjusted ? delayHtml(s - p) : ''}${late ? `<span class="delay alarm">sem chegada ${fmtDelta(late)}</span>` : ''}${ov ? `<span class="delay alarm">sobrepõe ${Math.round(ov.overlap)} min</span>` : ''}</div>
         ${chips ? `<div class="tc-info">${chips}</div>` : ''}
         <div class="tr-sub">${esc(sub)}${sub && times ? ' · ' : ''}${times}${e.motivo && adjusted ? ` · <span style="color:var(--warn)">${esc(e.motivo)}</span>` : ''}</div>
-        ${e.status !== 'concluido' && e.status !== 'cancelado' ? `<div class="tr-actions">${actionBtn(e, k, true)}${adjustBtn(e, k, true)}</div>` : ''}
+        ${e.status !== 'cancelado' ? `<div class="tr-actions">${actionBtn(e, k, true)}${e.status === 'programado' ? adjustBtn(e, k, true) : ''}</div>` : ''}
       </div>
     </div>`;
   }).join('')}</div>`;
@@ -1089,6 +1103,7 @@ function trow(e, k, sch) {
   const alarm = late ? `<span class="delay alarm">sem chegada ${fmtDelta(late)}</span>` : ov ? `<span class="delay alarm">sobrepõe ${Math.round(ov.overlap)} min</span>` : '';
   const tr = transitInfo(e, k);
   return `<article class="trow st-${e.status} ${late || ov ? 'warn' : ''}" data-id="${e.id}">
+    ${e.status === 'naoveio' ? `<span class="ns-ribbon">${I.x}Não veio</span>` : ''}
     <button type="button" class="grip" data-drag="${e.id}" data-day="${k}" title="Arraste para outra janela ou outro dia" aria-label="Arrastar caminhão">${I.grip}</button>
     <div class="trow-time ${adjusted ? 'adj' : ''}" data-expand="${e.id}">
       <b>${s != null ? opToHHMM(s) : '—'}</b>
@@ -1097,22 +1112,30 @@ function trow(e, k, sch) {
     <div class="trow-main" data-expand="${e.id}">
       <div class="trow-title">${mono(e)}<span>${esc(matName(e))}</span></div>
       <div class="trow-sub">
-        ${statusPill(e)}${adjusted ? delayHtml(s - p) : ''}${alarm}
+        ${e.status === 'programado' || e.status === 'cancelado' ? statusPill(e) : ''}${adjusted ? delayHtml(s - p) : ''}${alarm}
         ${isImp(e) ? `<span class="trow-tag imp">${I.alarm}Imprevisto</span>` : ''}
         ${tr ? `<span class="trow-tag transit">${I.route}chega ${fmtTime(tr.arr)}</span>` : ''}
         ${mc ? copyChip('code mini', I.barcode, '', mc) : ''}
         ${embMini(e)}
+        ${e.semRep && !getReps(e).length ? `<span class="ichip norep mini">${I.check}Sem reproc.</span>` : getReps(e).filter((r) => r.qtd).map((r) => copyChip('rep mini', I.recycle, '', fmt3(r.qtd), ` ${esc(r.un || 'kg')}`)).join('')}
+        ${e.os ? copyChip('os mini', I.file, 'Ordem', e.os) : ''}
+        ${e.ticket ? copyChip('ticket mini', I.calClock, 'Ticket', e.ticket) : ''}
         <span class="trow-type">${esc(t.n)} · ${fmtNum(weightOf(e))} jan.</span>
       </div>
     </div>
-    <div class="trow-prep" data-expand="${e.id}" title="Preparo ${pd}/7">
-      <span class="segs">${PREP.map((pp) => `<i class="c-${pp.c} ${e.prep?.[pp.k] ? 'on' : ''}"></i>`).join('')}</span>
-      <small class="${pd === PREP.length ? 'ok' : ''}">${pd === PREP.length ? 'Pronto' : `Preparo ${pd}/7`}</small>
+    <div class="trow-prep">
+      <span class="segs">${PREP.map((pp) => `<button type="button" class="seg c-${pp.c} ${e.prep?.[pp.k] ? 'on' : ''}" data-prep-one="${pp.k}" data-env="${e.id}" data-day="${k}" title="${esc(pp.full)} — ${e.prep?.[pp.k] ? 'feito (toque para desmarcar)' : 'toque para confirmar'}" aria-pressed="${e.prep?.[pp.k] ? 'true' : 'false'}">${esc(pp.l)}</button>`).join('')}</span>
+      <small class="${pd === PREP.length ? 'ok' : ''}">${pd === PREP.length ? `${I.check}Pronto` : `${pd}/7`}</small>
     </div>
     <div class="trow-act">${actionBtn(e, k, true)}<button type="button" class="icon-btn trow-more" data-expand="${e.id}" aria-label="Abrir detalhes">${I.chev}</button></div>
   </article>`;
 }
 
+function arrivalBand(e) {
+  if (e.status === 'veio') return `<div class="arr-band ok">${I.check}<div><b>Veio — tudo certo</b><small>Confirmado ${e.t?.veio ? `às ${fmtTime(e.t.veio)}` : ''}</small></div></div>`;
+  if (e.status === 'naoveio') return `<div class="arr-band no">${I.x}<div><b>Não veio</b><small>Marcado ${e.t?.naoveio ? `às ${fmtTime(e.t.naoveio)}` : ''} · fica guardado para reagendar em outro dia</small></div></div>`;
+  return '';
+}
 function tcard(e, k, sch) {
   const p = plannedOp(e), s = startOp(e, k), en = endOp(e, k);
   const adjusted = p != null && s != null && Math.round(s) !== Math.round(p);
@@ -1121,10 +1144,6 @@ function tcard(e, k, sch) {
   const sub = infoChips(e, k);
   const pd = prepDone(e);
   const t = TYPES[e.tipo] || TYPES.padrao;
-  const order = ['programado', 'chegou', 'envasando', 'concluido'];
-  const idx = order.indexOf(e.status);
-  const stamps = [null, e.t?.chegada, e.t?.inicio, e.t?.fim];
-  const labels = ['Programado', 'Chegada', 'Envase', 'Fim'];
   let times = '';
   if (p != null) times += `<div class="tt"><small>${isImp(e) ? 'Imprevisto' : 'Previsto'}</small><b>${adjusted ? `<s>${opToHHMM(p)}</s>` : opToHHMM(p)}</b></div>`;
   if (s != null && (adjusted || p == null)) times += `<div class="tt gold"><small>${e.t?.inicio ? 'Início real' : 'Ajustado'}</small><b>${opToHHMM(s)}</b>${p != null ? delayHtml(s - p) : ''}</div>`;
@@ -1138,13 +1157,13 @@ function tcard(e, k, sch) {
     ${sub ? `<div class="tc-info">${sub}</div>` : ''}
     <div class="tc-times">${times}</div>
     ${e.motivo && (adjusted || e.ajuste != null) ? `<div class="tc-motivo">Motivo: ${esc(e.motivo)}</div>` : ''}
-    ${e.status !== 'cancelado' ? `<div class="stepper">${order.map((st, i) => `<div class="st-dot ${i <= idx ? 'on' : ''} ${i === idx ? 'cur' : ''}"><i></i><span>${labels[i]}</span><small>${stamps[i] ? fmtTime(stamps[i]) : ''}</small></div>`).join('')}</div>` : ''}
+    ${arrivalBand(e)}
     ${e.obs ? `<div class="tc-obs">${esc(e.obs)}</div>` : ''}
     <div class="prep-dots">
       ${PREP.map((pp) => `<button type="button" class="pdot c-${pp.c} ${e.prep?.[pp.k] ? 'on' : ''}" data-prep-one="${pp.k}" data-env="${e.id}" data-day="${k}" title="${esc(pp.full)}">${e.prep?.[pp.k] ? I.check : I[pp.ic]}${esc(pp.l)}</button>`).join('')}
       <span class="prep-count ${pd === PREP.length ? 'ok' : ''}">${pd}/${PREP.length}</span>
     </div>
-    <div class="tc-actions">${actionBtn(e, k, false)}${adjustBtn(e, k, false)}<span class="spacer"></span><button class="btn btn-ghost btn-sm" data-edit="${e.id}" data-day="${k}" data-focus="hora">${I.alarm}Imprevisto</button><button class="btn btn-ghost btn-sm" data-edit="${e.id}" data-day="${k}">${I.edit}Editar</button></div>
+    <div class="tc-actions">${e.status === 'veio' ? '' : actionBtn(e, k, false)}${adjustBtn(e, k, false)}<span class="spacer"></span>${e.status === 'veio' ? `<button class="btn btn-ghost btn-sm" data-unveio="${e.id}" data-day="${k}" title="Voltar para aguardando">${I.back}Desmarcar</button>` : ''}<button class="btn btn-ghost btn-sm" data-edit="${e.id}" data-day="${k}" data-focus="hora">${I.alarm}Imprevisto</button><button class="btn btn-ghost btn-sm" data-edit="${e.id}" data-day="${k}">${I.edit}Editar</button></div>
   </article>`;
 }
 
@@ -1204,6 +1223,7 @@ function renderAgenda() {
   if (L.unassigned.length) un += `<div class="unassigned-wrap"><h3>✦ Sem janela definida (${L.unassigned.length})</h3>${L.unassigned.map((e) => truckView(e, k, sch)).join('')}</div>`;
   if (L.cancelled.length) un += `<div class="unassigned-wrap"><h3>✦ Cancelados (${L.cancelled.length})</h3>${L.cancelled.map((e) => truckView(e, k, sch)).join('')}</div>`;
   $('#unassigned').innerHTML = un;
+  $('#nsTray').innerHTML = noShowTray(k);
 
   renderCapacity(k, list, L, sch);
 }
@@ -1226,7 +1246,8 @@ function renderCapacity(k, list, L, sch) {
   else { const n = Math.floor(free + 1e-9); freeTxt = `${fmtNum(free)} ${free > 1 + 1e-9 ? 'janelas livres' : 'janela livre'} · cabe${n > 1 ? 'm' : ''} +${n} carreta${n > 1 ? 's' : ''} padrão`; freeCls = 'ok'; }
   const freeSlots = freeSuggestions(k);
 
-  const concl = act.filter((e) => e.status === 'concluido').length;
+  const concl = act.filter((e) => e.status === 'veio').length;
+  const nsN = list.filter(isNoShow).length;
   const delays = act.map((e) => { const p = plannedOp(e), s = startOp(e, k); return p != null && s != null ? s - p : 0; });
   const totalDelay = delays.reduce((a, x) => a + Math.max(0, x), 0);
   const ready = act.filter((e) => prepDone(e) === PREP.length).length;
@@ -1251,7 +1272,7 @@ function renderCapacity(k, list, L, sch) {
     <div class="cap-stats">
       <div class="stat"><small>1º envase</small><b>${sch.items.length ? opToHHMM(sch.items[0].s) : '—'}</b></div>
       <div class="stat"><small>Término previsto</small><b>${sch.lastEnd != null ? opToHHMM(sch.lastEnd) : '—'}</b></div>
-      <div class="stat"><small>Concluídos</small><b>${concl}/${act.length}</b></div>
+      <div class="stat"><small>Vieram</small><b>${concl}/${act.length}${nsN ? ` <em class="ns-n">${nsN} não</em>` : ''}</b></div>
       <div class="stat"><small>Atraso somado</small><b>${totalDelay ? fmtDelta(totalDelay) : '0'}</b></div>
       <div class="stat"><small>Preparo pronto</small><b>${ready}/${act.length}</b></div>
       <div class="stat stat-rep"><small>${I.recycle}Reprocesso</small><b class="${repTotals(act) ? 'stat-sm' : ''}">${repTotals(act) || '—'}</b></div>
@@ -1369,7 +1390,7 @@ function renderHistory() {
     const day = getDay(k);
     const rot = Object.values(day.routine || {}).filter((r) => r?.at).length;
     const plan = active(getPlan(k));
-    const conc = plan.filter((e) => e.status === 'concluido').length;
+    const conc = plan.filter((e) => e.status === 'veio').length;
     const delays = plan.map((e) => (e.t?.chegada && plannedOp(e) != null ? msToOp(k, e.t.chegada) - plannedOp(e) : null)).filter((v) => v != null);
     const avgDelay = delays.length ? delays.reduce((a, v) => a + Math.max(0, v), 0) / delays.length : null;
     return { x, k, has, p, rot, plan, conc, avgDelay, notes: day.notes };
@@ -1884,7 +1905,7 @@ function doCopyDay() {
     id: uid(), created: Date.now(), material: e.material, tipo: e.tipo, slot: e.slot, hora: e.hora ?? null,
     janelas: e.janelas || 'auto', dur: e.dur || 'auto', peso: e.peso || null, status: 'programado', prep: {}, t: {}, ajuste: null, motivo: '',
     os: keepIds ? e.os || '' : '', op: keepIds ? e.op || '' : '', ticket: keepIds ? e.ticket || '' : '',
-    reps: keepReps ? getReps(e).map((r) => ({ ...r })) : [], obs: '',
+    reps: keepReps ? getReps(e).map((r) => ({ ...r })) : [], semRep: keepReps ? !!e.semRep : false, obs: '',
   }));
   (S.plan[to] ||= []).push(...copies);
   save();
@@ -1909,39 +1930,174 @@ function render() {
 }
 
 /* ================= Ciclo do caminhão ================= */
-function advance(k, id) {
+function advance(k, id) { markVeio(k, id); }
+function markVeio(k, id) {
   const e = findTruck(k, id);
-  const f = e && FLOW[e.status];
-  if (!f) return;
-  const prev = { status: e.status, t: { ...e.t } };
+  if (!e || e.status === 'veio') return;
+  const prev = { status: e.status, t: { ...e.t }, noshows: e.noshows ? [...e.noshows] : undefined };
   e.t ||= {};
-  e.t[f.t] = Date.now();
-  e.status = f.next;
+  e.t.veio = Date.now();
+  delete e.t.naoveio;
+  if (prev.status === 'naoveio' && e.noshows?.length && e.noshows[e.noshows.length - 1] === k) e.noshows.pop();
+  e.status = 'veio';
+  save(); render();
+  celebrateTruck(id);
+  const undo = () => { e.status = prev.status; e.t = prev.t; e.noshows = prev.noshows; save(); render(); };
+  lastUndo = undo;
+  const p = plannedOp(e);
+  if (p != null && k === currentOpDayKey()) {
+    const late = msToOp(k, e.t.veio) - (e.ajuste ?? p);
+    if (late > 10) {
+      toast(`${matName(e)} veio com ${fmtDelta(late)} de atraso. Ajustar o horário?`, 'Ajustar', () => openAdjust(k, id, { motivo: 'Atraso do veículo', value: Math.round(msToOp(k, e.t.veio)) }));
+      return;
+    }
+  }
+  toast(`${matName(e)} veio ✓`, 'Desfazer', undo);
+}
+function markNaoVeio(k, id) {
+  const e = findTruck(k, id);
+  if (!e || e.status === 'naoveio') return;
+  const prev = { status: e.status, t: { ...e.t }, noshows: e.noshows ? [...e.noshows] : undefined };
+  e.t ||= {};
+  e.t.naoveio = Date.now();
+  delete e.t.veio;
+  e.status = 'naoveio';
+  e.noshows = [...(e.noshows || []), k];
+  save(); render();
+  const el = $(`[data-id="${id}"]`);
+  if (el && !matchMedia('(prefers-reduced-motion: reduce)').matches) { el.classList.add('just-no'); setTimeout(() => el.classList.remove('just-no'), 900); }
+  const undo = () => { e.status = prev.status; e.t = prev.t; e.noshows = prev.noshows; save(); render(); };
+  lastUndo = undo;
+  toast(`${matName(e)} não veio — fica guardado para reagendar`, 'Desfazer', undo);
+}
+function unmarkVeio(k, id) {
+  const e = findTruck(k, id);
+  if (!e) return;
+  const prev = { status: e.status, t: { ...e.t } };
+  e.status = 'programado'; delete e.t.veio;
   save(); render();
   const undo = () => { e.status = prev.status; e.t = prev.t; save(); render(); };
   lastUndo = undo;
-  const p = plannedOp(e);
-  if (f.t === 'chegada' && p != null) {
-    const target = e.ajuste ?? p;
-    const late = msToOp(k, e.t.chegada) - target;
-    if (late > 10) {
-      toast(`Chegou com ${fmtDelta(late)} de atraso. Justificar e ajustar?`, 'Ajustar', () => openAdjust(k, id, { motivo: 'Atraso do veículo', value: Math.round(msToOp(k, e.t.chegada)) }));
-      return;
-    }
+  toast('Voltou para aguardando', 'Desfazer', undo);
+}
+// efeito ao confirmar que o caminhão veio
+function celebrateTruck(id) {
+  const el = $(`.view:not([hidden]) [data-id="${id}"]`) || $(`[data-id="${id}"]`);
+  if (!el) return;
+  el.classList.add('just-veio');
+  setTimeout(() => el.classList.remove('just-veio'), 1600);
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const r = (el.querySelector('.veio-badge, .arr-band') || el).getBoundingClientRect();
+  const b = document.createElement('div');
+  b.className = 'burst';
+  b.style.left = `${r.left + Math.min(r.width, 120) / 2}px`;
+  b.style.top = `${r.top + r.height / 2}px`;
+  const cols = ['var(--ok)', 'var(--gold)', 'var(--gold-hi)', 'var(--j-emerald)', 'var(--j-sky)', 'var(--j-lime)'];
+  let html = '<span class="burst-ring"></span><span class="burst-check">' + I.check + '</span>';
+  for (let i = 0; i < 22; i++) {
+    const a = (i / 22) * Math.PI * 2 + Math.random() * 0.3, d = 46 + Math.random() * 44;
+    html += `<i style="--dx:${(Math.cos(a) * d).toFixed(1)}px;--dy:${(Math.sin(a) * d).toFixed(1)}px;--c:${cols[i % cols.length]};--s:${(4 + Math.random() * 5).toFixed(1)}px;--rot:${Math.round(Math.random() * 360)}deg;animation-delay:${(Math.random() * 0.08).toFixed(2)}s"></i>`;
   }
-  if (f.t === 'inicio' || f.t === 'fim') {
-    const aff = simulateCascade(k, id, () => {});
-    if (aff.length) {
-      toast(`${aff.length} ${aff.length > 1 ? 'caminhões seguintes vão' : 'caminhão seguinte vai'} atrasar. Empurrar?`, 'Empurrar', () => {
-        const real = cascadeList(getPlan(k), k, id);
-        save(); render();
-        toast(`${real.length} horário${real.length > 1 ? 's' : ''} empurrado${real.length > 1 ? 's' : ''}`);
-      });
-      return;
-    }
+  b.innerHTML = html;
+  document.body.appendChild(b);
+  setTimeout(() => b.remove(), 1300);
+}
+/* ----- reagendar quem não veio ----- */
+let reag = null;
+function openReag(k, id) {
+  const e = findTruck(k, id);
+  if (!e) return;
+  const today = new Date();
+  const base = keyOf(today) > k ? today : fromKey(k);
+  const days = [];
+  if (isOpDay(today) && keyOf(today) > k) days.push(today);
+  let d = nextOpDay(base);
+  while (days.length < 6) { if (!days.some((x) => keyOf(x) === keyOf(d))) days.push(d); d = nextOpDay(d); }
+  reag = { k, id, to: keyOf(days[0]) };
+  $('#reagBody').innerHTML = `
+    <div class="reag-truck">${mono(e)}<div><b>${esc(matName(e))}</b><small>Não veio em ${esc(fmtShort(fromKey(k)))}${(e.noshows || []).length > 1 ? ` · já faltou ${e.noshows.length} vezes` : ''}</small></div></div>
+    <span class="fl">Para qual dia?</span>
+    <div class="reag-days">${days.map((x) => {
+      const kk = keyOf(x), free = CAP - layout(getPlan(kk)).used;
+      return `<button type="button" class="reag-day ${kk === reag.to ? 'active' : ''}" data-reag-day="${kk}"><b>${esc(fmtShort(x))}</b><small class="${free < weightOf(e) - 1e-9 ? 'bad' : ''}">${fmtNum(Math.max(0, free))} ${free > 1 + 1e-9 ? 'livres' : 'livre'}</small></button>`;
+    }).join('')}</div>
+    <div class="form-grid" style="margin-top:12px">
+      <label>Outro dia<input type="date" id="reagDate"></label>
+      <label>Janela<select id="reagSlot">${SLOTS.map((x) => `<option value="${x.id}" ${x.id === e.slot ? 'selected' : ''}>${x.t}${x.id === e.slot ? ' · a mesma de antes' : ''}</option>`).join('')}</select></label>
+    </div>
+    <p class="muted small" style="margin:12px 0 0">Ele volta como <b>Aguardando</b> no novo dia, com o preparo e os dados que já tinha.</p>
+    <div class="sheet-foot"><span class="spacer"></span><button type="button" class="btn btn-ghost" data-close>Cancelar</button><button type="button" class="btn btn-primary" data-reag-go>${I.calClock}Reagendar</button></div>`;
+  $('#reagDlg').showModal();
+}
+function doReag() {
+  if (!reag) return;
+  const { k, id } = reag;
+  const to = $('#reagDate').value || reag.to;
+  const slot = $('#reagSlot').value;
+  const list = S.plan[k] || [];
+  const i = list.findIndex((x) => x.id === id);
+  if (i < 0) return;
+  const before = JSON.parse(JSON.stringify(S.plan));
+  const e = list[i];
+  e.status = 'programado'; e.slot = slot; e.hora = null; e.ajuste = null;
+  e.t ||= {}; delete e.t.naoveio; delete e.t.veio;
+  e.reag = { from: k, at: Date.now() };
+  if (to !== k) {
+    list.splice(i, 1);
+    if (!list.length) delete S.plan[k];
+    (S.plan[to] ||= []).push(e);
   }
-  const msg = { chegada: 'Chegada registrada', inicio: 'Envase iniciado', fim: 'Envase finalizado' }[f.t];
-  toast(`${msg} às ${fmtTime(e.t[f.t])}`, 'Desfazer', undo);
+  save();
+  $('#reagDlg').close();
+  agDay = to;
+  if (currentTab !== 'agenda') setTab('agenda'); else render();
+  focusTruckCard(to, id);
+  const undo = () => { S.plan = before; agDay = k; save(); render(); };
+  lastUndo = undo;
+  toast(`${matName(e)} reagendado para ${fmtShort(fromKey(to))} · ${SLOTS[slotIdx(slot)].t}`, 'Desfazer', undo);
+}
+// caminhões que não vieram em outros dias (para reaproveitar)
+function pendingNoShows(exceptDay) {
+  const out = [];
+  const lim = keyOf(addDays(new Date(), -21));
+  Object.entries(S.plan).forEach(([k, list]) => {
+    if (k === exceptDay || k < lim) return;
+    list.forEach((e) => { if (e.status === 'naoveio') out.push({ k, e }); });
+  });
+  return out.sort((a, b) => (a.k < b.k ? 1 : -1));
+}
+function noShowTray(k) {
+  const list = pendingNoShows(k);
+  if (!list.length) return '';
+  return `<div class="ns-tray">
+    <div class="ns-tray-head"><span class="ns-ico">${I.calClock}</span><div><b>Não vieram — guardados para reagendar</b><small>Traga para ${esc(fmtShort(fromKey(k)))} ou escolha outro dia</small></div><span class="pill">${list.length}</span></div>
+    <div class="ns-tray-list">${list.map(({ k: kk, e }) => `
+      <div class="ns-item">${mono(e)}<div class="ns-info"><b>${esc(matName(e))}</b><small>Não veio ${esc(fmtShort(fromKey(kk)))} · ${esc(slotLabel(e))}</small></div>
+        <div class="ns-act"><button type="button" class="btn btn-ghost btn-sm" data-reag="${e.id}" data-day="${kk}">${I.calClock}Outro dia</button>
+        <button type="button" class="btn btn-primary btn-sm" data-bring="${e.id}" data-from="${kk}" data-to="${k}">${I.plus}Trazer</button></div>
+      </div>`).join('')}</div>
+  </div>`;
+}
+function bringNoShow(from, id, to) {
+  const list = S.plan[from] || [];
+  const i = list.findIndex((x) => x.id === id);
+  if (i < 0) return;
+  const before = JSON.parse(JSON.stringify(S.plan));
+  const e = list[i];
+  list.splice(i, 1);
+  if (!list.length) delete S.plan[from];
+  e.status = 'programado'; e.ajuste = null; e.hora = null;
+  e.t ||= {}; delete e.t.naoveio; delete e.t.veio;
+  e.reag = { from, at: Date.now() };
+  const occ = layout(getPlan(to)).occ;
+  const si = slotIdx(e.slot);
+  if (si < 0 || occ[si].fill > 1e-9) e.slot = firstFreeSlot(to) || e.slot;
+  (S.plan[to] ||= []).push(e);
+  save(); render();
+  focusTruckCard(to, id);
+  const undo = () => { S.plan = before; save(); render(); };
+  lastUndo = undo;
+  toast(`${matName(e)} trazido para ${fmtShort(fromKey(to))} · ${SLOTS[slotIdx(e.slot)]?.t || 'sem janela'}`, 'Desfazer', undo);
 }
 
 /* ================= Diálogo: ajustar horário ================= */
@@ -2053,6 +2209,17 @@ function fillSlotOptions(dayKey, selected, ignoreId) {
   }).join('');
 }
 let formReps = [];
+let formSemRep = false;
+function applySemRep() {
+  const on = formSemRep;
+  $('#noRepBtn').classList.toggle('active', on);
+  $('#noRepBtn').setAttribute('aria-pressed', on ? 'true' : 'false');
+  $('#noRepMsg').hidden = !on;
+  $('#repList').hidden = on;
+  $('[data-rep-add]').hidden = on;
+  $('.rep-field').classList.toggle('is-none', on);
+  if (on) $('#repTotal').textContent = '';
+}
 const UNITS = ['kg', 'L', 't', 'IBC', 'tambor'];
 function readRepRows() {
   return $$('#repList .rep-row').map((row) => ({
@@ -2119,8 +2286,10 @@ function openEnv(dayKey, id, slot, pre) {
   form.dia.value = dayKey;
   fillSlotOptions(dayKey, e ? e.slot : (slot && slot !== '__imp' ? slot : firstFreeSlot(dayKey)), e?.id);
   formReps = e ? getReps(e).map((r) => ({ ...r })) : [];
+  formSemRep = !!e?.semRep && !formReps.length;
   if (!formReps.length) formReps.push({ qtd: null, un: 'kg', lote: '' });
   renderRepRows();
+  applySemRep();
   form.os.value = e?.os || '';
   const impMode = (e && isImp(e)) || slot === '__imp';
   let hv = e?.hora != null ? opToHHMM(e.hora) : '';
@@ -2144,6 +2313,7 @@ function openEnv(dayKey, id, slot, pre) {
   form.status.value = e?.status || 'programado';
   form.obs.value = e?.obs || '';
   updateHint();
+  updateCatHint(true); // sem produto, sem dica de embalagem
   dlg.showModal();
   if (!e && matchMedia('(min-width: 721px)').matches) form.material.focus();
 }
@@ -2154,7 +2324,7 @@ function saveEnv() {
     material: form.material.value.trim(), tipo: form.tipo.value, janelas: form.janelas.value, dur: form.dur.value,
     slot: horaMode === 'janela' ? form.slot.value : '',
     hora: horaMode === 'imprevisto' && form.hora.value ? hhmmToOp(form.hora.value) : null,
-    reps: readRepRows().filter((r) => r.qtd || r.lote), repQtd: undefined, repUn: undefined, os: form.os.value.trim(),
+    reps: formSemRep ? [] : readRepRows().filter((r) => r.qtd || r.lote), semRep: formSemRep, repQtd: undefined, repUn: undefined, os: form.os.value.trim(),
     op: form.op.value.trim(), ticket: form.ticket.value.trim(), peso: parsePesoKg(form.pesoT.value), ...readPerc(), status: form.status.value, obs: form.obs.value.trim(),
   };
   if (!data.material) { form.material.focus(); return false; }
@@ -2165,10 +2335,11 @@ function saveEnv() {
     const old = src[i];
     const e = { ...old, ...data };
     if (old.slot !== data.slot || (old.hora ?? null) !== data.hora) { e.ajuste = null; }
-    // status voltou no ciclo: limpa carimbos posteriores
-    const order = ['programado', 'chegou', 'envasando', 'concluido'];
-    const ni = order.indexOf(data.status);
-    if (ni >= 0) { e.t = { ...(e.t || {}) }; if (ni < 1) delete e.t.chegada; if (ni < 2) delete e.t.inicio; if (ni < 3) delete e.t.fim; }
+    // status mudou: ajusta os carimbos
+    e.t = { ...(e.t || {}) };
+    if (data.status !== 'veio') { delete e.t.veio; delete e.t.chegada; delete e.t.inicio; delete e.t.fim; }
+    if (data.status === 'veio') e.t.veio ||= Date.now();
+    if (data.status === 'naoveio') { e.t.naoveio ||= Date.now(); if (old.status !== 'naoveio') e.noshows = [...(e.noshows || []), editing.day]; } else delete e.t.naoveio;
     if (dia !== editing.day) {
       src.splice(i, 1);
       if (!src.length) delete S.plan[editing.day];
@@ -2207,7 +2378,7 @@ document.addEventListener('click', (ev) => {
   if (c('[data-copy-go]')) { doCopyDay(); return; }
   if (c('[data-drag]')) return;
   if ((el = c('[data-ag-view]'))) { S.settings.agView = el.dataset.agView; expanded.clear(); save(); render(); return; }
-  if ((el = c('[data-expand]')) && !c('[data-copy], [data-advance], [data-adjust]')) {
+  if ((el = c('[data-expand]')) && !c('[data-copy], [data-veio], [data-naoveio], [data-adjust], [data-prep-one]')) {
     const id = el.dataset.expand;
     if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
     render();
@@ -2220,7 +2391,14 @@ document.addEventListener('click', (ev) => {
     if (horaMode === 'imprevisto') { if (!form.hora.value && form.slot.value) form.hora.value = SLOTS[slotIdx(form.slot.value)].t; form.hora.focus(); }
     return;
   }
-  if (c('[data-rep-add]')) { formReps = readRepRows(); formReps.push({ qtd: null, un: formReps.at(-1)?.un || 'kg', lote: '' }); renderRepRows(true); return; }
+  if (c('[data-no-rep]')) {
+    formSemRep = !formSemRep;
+    formReps = formSemRep ? [] : [{ qtd: null, un: 'kg', lote: '' }];
+    renderRepRows(!formSemRep);
+    applySemRep();
+    return;
+  }
+  if (c('[data-rep-add]')) { formSemRep = false; applySemRep(); formReps = readRepRows(); formReps.push({ qtd: null, un: formReps.at(-1)?.un || 'kg', lote: '' }); renderRepRows(true); return; }
   if ((el = c('[data-rep-del]'))) {
     formReps = readRepRows();
     formReps.splice(Number(el.dataset.repDel), 1);
@@ -2343,9 +2521,14 @@ document.addEventListener('click', (ev) => {
     return render();
   }
   if ((el = c('[data-prep-one]'))) {
-    const k = el.dataset.day;
-    const e = setPrep(k, el.dataset.env, el.dataset.prepOne);
+    const k = el.dataset.day, pk = el.dataset.prepOne, env = el.dataset.env;
+    const e = setPrep(k, env, pk);
     afterPrep(e, k);
+    if (el.classList.contains('seg')) {
+      const nb = $(`.trow[data-id="${env}"] .seg[data-prep-one="${pk}"]`);
+      if (nb) { nb.classList.add('pop'); setTimeout(() => nb.classList.remove('pop'), 500); }
+      if (e && prepDone(e) === PREP.length) celebrateTruck(env);
+    }
     return;
   }
   if ((el = c('[data-prep-next]'))) {
@@ -2367,7 +2550,13 @@ document.addEventListener('click', (ev) => {
     toast(all ? 'Etapas desmarcadas' : `${e.material}: preparo completo`, 'Desfazer', () => { e.prep = snap; save(); render(); });
     return;
   }
-  if ((el = c('[data-advance]'))) return advance(el.dataset.day, el.dataset.advance);
+  if ((el = c('[data-veio]'))) return markVeio(el.dataset.day, el.dataset.veio);
+  if ((el = c('[data-naoveio]'))) return markNaoVeio(el.dataset.day, el.dataset.naoveio);
+  if ((el = c('[data-unveio]'))) return unmarkVeio(el.dataset.day, el.dataset.unveio);
+  if ((el = c('[data-reag]'))) return openReag(el.dataset.day, el.dataset.reag);
+  if ((el = c('[data-reag-day]'))) { reag.to = el.dataset.reagDay; $('#reagDate').value = ''; $$('[data-reag-day]').forEach((b) => b.classList.toggle('active', b === el)); return; }
+  if (c('[data-reag-go]')) return doReag();
+  if ((el = c('[data-bring]'))) return bringNoShow(el.dataset.from, el.dataset.bring, el.dataset.to);
   if ((el = c('[data-adjust]'))) return openAdjust(el.dataset.day, el.dataset.adjust);
   if ((el = c('[data-add-at]'))) return openEnv(agDay, null, '__imp', { hora: Number(el.dataset.addAt) });
   if ((el = c('[data-add-slot]'))) return openEnv(agDay, null, el.dataset.addSlot || undefined);
@@ -2509,11 +2698,12 @@ $('#settingsBtn').addEventListener('click', () => { applyTheme(); renderSecUi();
 $('#themeBtn').addEventListener('click', toggleTheme);
 function toggleTheme() {
   const st = S.settings;
-  if (document.documentElement.dataset.mode === 'dark') { st.lastDark = !st.theme || st.theme === 'auto' || st.theme === 'light' ? 'dark' : st.theme; st.theme = 'light'; }
-  else st.theme = st.lastDark || 'dark';
+  const cur = document.documentElement.dataset.theme;
+  if (document.documentElement.dataset.mode === 'dark') { st.lastDark = cur || 'dark'; st.theme = st.lastLight || 'light'; }
+  else { st.lastLight = cur || 'light'; st.theme = st.lastDark || 'dark'; }
   save(); applyTheme(); toast(`Tema: ${THEME_NAMES[st.theme]}`);
 }
-const THEME_NAMES = { auto: 'Automático', dark: 'Noite Real', light: 'Pergaminho', crimson: 'Carmesim Imperial', knight: 'Cavaleiro Negro' };
+const THEME_NAMES = { auto: 'Automático', dark: 'Noite Real', light: 'Pergaminho', crimson: 'Carmesim Imperial', knight: 'Cavaleiro Negro', emerald: 'Esmeralda Imperial', ocean: 'Safira Profunda', midnight: 'Céu Lunar', sage: 'Sálvia & Marfim', sakura: 'Sakura', winter: 'Névoa de Inverno' };
 $('#nameInput').addEventListener('change', (ev) => { S.settings.name = ev.target.value.trim().slice(0, 30); save(); render(); });
 $('#exportBtn').addEventListener('click', async () => {
   const prot = !!SEC.vault;
@@ -2721,9 +2911,12 @@ function catIndex() {
   if (!S.cat?.items?.length) return null;
   if (catIdx && catIdx.at === S.cat.at && catIdx.n === S.cat.items.length) return catIdx;
   const byMat = new Map(), byEmb = new Map(), byDesc = new Map();
+  // código só com os números (a planilha às vezes traz "50151656*" ou espaços)
+  const mk = (c) => String(c).match(/\d{4,}/)?.[0] || String(c).trim();
   S.cat.items.forEach((it) => {
-    if (!byMat.has(it[0])) byMat.set(it[0], []);
-    byMat.get(it[0]).push(it);
+    const key = mk(it[0]);
+    if (!byMat.has(key)) byMat.set(key, []);
+    byMat.get(key).push(it);
     if (!byEmb.has(it[2])) byEmb.set(it[2], { code: it[2], name: it[3], items: [] });
     byEmb.get(it[2]).items.push(it);
     byDesc.set(norm(it[1]), it);
@@ -2882,10 +3075,13 @@ $('#catClear').addEventListener('click', () => { catQ = ''; $('#catQ').value = '
 
 /* ----- no cadastro do caminhão ----- */
 let tipoTouched = false;
-function updateCatHint() {
+function updateCatHint(final) {
   const box = $('#catHint');
   const r = catLookup(form.material.value);
-  if (r.state === 'none' || r.state === 'nocode' || !form.material.value.trim()) { box.hidden = true; box.innerHTML = ''; return; }
+  const hide = () => { box.hidden = true; box.innerHTML = ''; box.className = 'span-2 cat-hint'; };
+  if (r.state === 'none' || r.state === 'nocode' || !form.material.value.trim()) return hide();
+  // ainda digitando o código: só avisa "não está na planilha" quando o número estiver completo
+  if (r.state === 'missing' && !final && r.code.length < 8) return hide();
   box.hidden = false;
   if (r.state === 'missing') {
     box.className = 'cat-hint warn';
@@ -2911,7 +3107,7 @@ form.material.addEventListener('change', () => {
   const v = form.material.value.trim();
   const ix = catIndex();
   if (ix && /^\d{4,}$/.test(v) && ix.byMat.get(v)?.length === 1) form.material.value = `${v} ${ix.byMat.get(v)[0][1]}`;
-  updateCatHint(); catApplyTipo();
+  updateCatHint(true); catApplyTipo();
 });
 form.tipo.addEventListener('change', (ev) => { if (ev.isTrusted) tipoTouched = true; });
 form.pesoT.addEventListener('input', updateCatHint);

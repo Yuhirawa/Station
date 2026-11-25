@@ -7,14 +7,14 @@
   <meta name="description" content="Checklist diária, agenda de caminhões e preparo de envases.">
   <meta name="theme-color" content="#0a0610">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=18">
+  <link rel="stylesheet" href="style.css?v=19">
   <script>
     // aplica tema e preferências antes de desenhar (evita "piscar")
     (function () {
@@ -27,8 +27,8 @@
       var t = st.theme || 'dark';
       if (t === 'auto') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
       r.dataset.theme = t;
-      r.dataset.mode = t === 'light' ? 'light' : 'dark';
-      r.dataset.accent = !st.accent || st.accent === 'auto' ? (t === 'knight' ? 'silver' : 'gold') : st.accent;
+      r.dataset.mode = /^(light|sage|sakura|winter)$/.test(t) ? 'light' : 'dark';
+      r.dataset.accent = !st.accent || st.accent === 'auto' ? ({ knight: 'silver', midnight: 'silver', winter: 'silver', sakura: 'ruby' }[t] || 'gold') : st.accent;
       r.dataset.density = st.density || 'comfort';
       r.dataset.font = st.font || 'M';
       if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) r.classList.add('is-splash');
@@ -38,14 +38,14 @@
 <body>
   <div class="splash" aria-hidden="true">
     <div class="splash-crest">
-      <img src="icons/icon.svg" width="120" height="120" alt="">
+      <img src="icon.svg" width="120" height="120" alt="">
       <strong>Filling</strong>
       <span>Painel Real de Envase</span>
     </div>
   </div>
   <header class="topbar">
     <div class="brand">
-      <img src="icons/icon.svg" alt="" width="38" height="38">
+      <img src="icon.svg" alt="" width="38" height="38">
       <div>
         <strong>Filling</strong>
         <span>Painel Real de Envase</span>
@@ -183,6 +183,7 @@
 
       <div class="grid-plan">
         <div class="col">
+          <div id="nsTray"></div>
           <div class="timeline" id="timeline"></div>
           <div id="unassigned"></div>
         </div>
@@ -371,7 +372,9 @@
           <div class="rep-head">
             <span class="fl"><span data-ic="recycle"></span>Reprocessos</span>
             <span class="rep-total" id="repTotal"></span>
+            <button type="button" class="no-rep-btn" id="noRepBtn" data-no-rep aria-pressed="false"><span data-ic="check"></span>Sem reprocesso</button>
           </div>
+          <p class="no-rep-msg" id="noRepMsg" hidden><span data-ic="check"></span>Este caminhão não tem reprocesso.</p>
           <div class="rep-list" id="repList"></div>
           <button type="button" class="rep-add" data-rep-add><span data-ic="plus"></span>Adicionar reprocesso</button>
         </div>
@@ -436,10 +439,19 @@
       <div class="set-block">
         <strong><span data-ic="palette"></span>Tema</strong>
         <div class="theme-grid">
-          <button data-theme-set="dark" class="theme-opt"><i style="--a:#120c1a;--b:#d8b45c;--c2:#3a1f63"></i>Noite Real</button>
-          <button data-theme-set="light" class="theme-opt"><i style="--a:#fffcf5;--b:#a47d22;--c2:#ece2cf"></i>Pergaminho</button>
-          <button data-theme-set="crimson" class="theme-opt"><i style="--a:#170a0e;--b:#d8b45c;--c2:#5c0f22"></i>Carmesim Imperial</button>
-          <button data-theme-set="knight" class="theme-opt"><i style="--a:#101113;--b:#c3c9d4;--c2:#2a2e38"></i>Cavaleiro Negro</button>
+          <span class="theme-group-title">Escuros</span>
+          <button data-theme-set="dark" class="theme-opt"><i style="--a:#120c1a;--b:#d8b45c;--c2:#3a1f63;--p:var(--pat-royal)"></i>Noite Real</button>
+          <button data-theme-set="crimson" class="theme-opt"><i style="--a:#170a0e;--b:#d8b45c;--c2:#6c1129;--p:var(--pat-crimson)"></i>Carmesim Imperial</button>
+          <button data-theme-set="knight" class="theme-opt"><i style="--a:#101113;--b:#c3c9d4;--c2:#2a2e38;--p:var(--pat-knight)"></i>Cavaleiro Negro</button>
+          <button data-theme-set="emerald" class="theme-opt"><i style="--a:#0a1812;--b:#d8b45c;--c2:#145a3e;--p:var(--pat-emerald)"></i>Esmeralda Imperial</button>
+          <button data-theme-set="ocean" class="theme-opt"><i style="--a:#0a1224;--b:#d8b45c;--c2:#1d3c86;--p:var(--pat-ocean)"></i>Safira Profunda</button>
+          <button data-theme-set="midnight" class="theme-opt"><i style="--a:#0f0c1c;--b:#c3c9d4;--c2:#3a2d8a;--p:var(--pat-midnight)"></i>Céu Lunar</button>
+          <span class="theme-group-title">Claros</span>
+          <button data-theme-set="light" class="theme-opt"><i style="--a:#fffcf5;--b:#a47d22;--c2:#ece2cf;--p:var(--pat-parchment)"></i>Pergaminho</button>
+          <button data-theme-set="sage" class="theme-opt"><i style="--a:#fbfcf8;--b:#8b6a1c;--c2:#cfe0d3;--p:var(--pat-sage)"></i>Sálvia & Marfim</button>
+          <button data-theme-set="sakura" class="theme-opt"><i style="--a:#fffafb;--b:#b8314c;--c2:#f3cfdb;--p:var(--pat-sakura)"></i>Sakura</button>
+          <button data-theme-set="winter" class="theme-opt"><i style="--a:#fcfdfe;--b:#5f6775;--c2:#d3deee;--p:var(--pat-winter)"></i>Névoa de Inverno</button>
+          <span class="theme-group-title">Outro</span>
           <button data-theme-set="auto" class="theme-opt"><i style="--a:#120c1a;--b:#fffcf5;--c2:#a47d22"></i>Automático</button>
         </div>
       </div>
@@ -508,6 +520,17 @@
   </dialog>
 
   <!-- ================= DIÁLOGO: COPIAR PROGRAMAÇÃO ================= -->
+  <dialog id="reagDlg" class="sheet">
+    <div class="sheet-head">
+      <div>
+        <span class="eyebrow">Não veio</span>
+        <h2>Reagendar caminhão</h2>
+      </div>
+      <button type="button" class="icon-btn" data-close aria-label="Fechar"><span data-ic="x"></span></button>
+    </div>
+    <div class="adj" id="reagBody"></div>
+  </dialog>
+
   <dialog id="copyDlg" class="sheet">
     <div class="sheet-head">
       <div>
@@ -535,7 +558,7 @@
 
   <div id="lock" class="lock" hidden>
     <div class="lock-card">
-      <div class="lock-crest"><img src="icons/icon.svg" width="76" height="76" alt=""></div>
+      <div class="lock-crest"><img src="icon.svg" width="76" height="76" alt=""></div>
       <strong class="lock-title">Filling</strong>
       <p class="lock-sub" id="lockSub">Painel protegido</p>
       <div id="lockBody"></div>
@@ -567,7 +590,7 @@
         <p><kbd>N</kbd><span>Novo caminhão</span></p>
         <p><kbd>V</kbd><span>Agenda resumida / detalhada</span></p>
         <p><kbd>I</kbd><span>Novo horário imprevisto</span></p>
-        <p><kbd>R</kbd><span>Registrar chegada / iniciar / finalizar o próximo</span></p>
+        <p><kbd>R</kbd><span>Marcar que o próximo caminhão veio</span></p>
         <p><kbd>A</kbd><span>Ajustar horário do próximo caminhão</span></p>
         <h4>Geral</h4>
         <p><kbd>T</kbd><span>Alternar tema claro / escuro</span></p>
@@ -582,6 +605,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=18"></script>
+  <script src="app.js?v=19"></script>
 </body>
 </html>

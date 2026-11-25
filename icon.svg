@@ -1,23 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#36205e"/><stop offset="1" stop-color="#0c0714"/>
-    </linearGradient>
-    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#f8e4a2"/><stop offset=".55" stop-color="#d8b45c"/><stop offset="1" stop-color="#9c7a2c"/>
-    </linearGradient>
-    <radialGradient id="glow" cx=".5" cy=".35" r=".6">
-      <stop offset="0" stop-color="#d8b45c" stop-opacity=".22"/><stop offset="1" stop-color="#d8b45c" stop-opacity="0"/>
-    </radialGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2d1656"/><stop offset=".55" stop-color="#150a28"/><stop offset="1" stop-color="#07040d"/></linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".42" r=".55"><stop offset="0" stop-color="#8a5ae0" stop-opacity=".5"/><stop offset="1" stop-color="#8a5ae0" stop-opacity="0"/></radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbe9b0"/><stop offset=".5" stop-color="#dcb65e"/><stop offset="1" stop-color="#a07a2a"/></linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8a6420"/><stop offset=".3" stop-color="#e9c873"/><stop offset=".45" stop-color="#f8e3a4"/><stop offset=".75" stop-color="#c99a3e"/><stop offset="1" stop-color="#7a561a"/></linearGradient>
+    <linearGradient id="liq" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6d77f"/><stop offset="1" stop-color="#c28c2b"/></linearGradient>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <rect width="512" height="512" rx="112" fill="url(#glow)"/>
-  <rect x="28" y="28" width="456" height="456" rx="88" fill="none" stroke="url(#gold)" stroke-opacity=".6" stroke-width="5"/>
-  <path d="M136 196l64 48 56-96 56 96 64-48-28 104H164z" fill="url(#gold)"/>
-  <circle cx="136" cy="190" r="15" fill="url(#gold)"/>
-  <circle cx="256" cy="136" r="17" fill="url(#gold)"/>
-  <circle cx="376" cy="190" r="15" fill="url(#gold)"/>
-  <rect x="164" y="310" width="184" height="22" rx="7" fill="url(#gold)"/>
-  <path d="M256 350c0 0-40 44-40 70a40 40 0 0 0 80 0c0-26-40-70-40-70z" fill="url(#gold)"/>
-  <circle cx="256" cy="232" r="13" fill="#36205e"/>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="116" fill="url(#glow)"/>
+  <rect x="18" y="18" width="476" height="476" rx="100" fill="none" stroke="url(#gold)" stroke-opacity=".5" stroke-width="4"/>
+  <g>  <g id="art">
+    <!-- coroa -->
+    <path d="M178 150 L166 86 L214 120 L256 70 L298 120 L346 86 L334 150 Z" fill="url(#gold)"/>
+    <rect x="176" y="148" width="160" height="20" rx="6" fill="url(#gold)"/>
+    <rect x="176" y="148" width="160" height="20" rx="6" fill="none" stroke="#7a5a18" stroke-opacity=".35" stroke-width="2"/>
+    <circle cx="166" cy="84" r="9" fill="#fbe9b0"/><circle cx="256" cy="66" r="10" fill="#fbe9b0"/><circle cx="346" cy="84" r="9" fill="#fbe9b0"/>
+    <circle cx="256" cy="158" r="5" fill="#b03a5b"/><circle cx="216" cy="158" r="4" fill="#3f6fd0"/><circle cx="296" cy="158" r="4" fill="#2f9e6a"/>
+    <!-- bico de envase -->
+    <rect x="236" y="176" width="40" height="22" rx="6" fill="url(#gold)"/>
+    <path d="M244 198 h24 l-5 16 h-14 z" fill="url(#gold)"/>
+    <!-- gota -->
+    <path d="M256 226 C256 226 239 249 239 260 A17 17 0 0 0 273 260 C273 249 256 226 256 226 Z" fill="url(#liq)"/>
+    <path d="M249 255 a8 8 0 0 0 4 10" fill="none" stroke="#fff6d6" stroke-width="3" stroke-linecap="round" stroke-opacity=".8"/>
+    <!-- tambor sendo cheio -->
+    <path d="M150 304 V428 A106 24 0 0 0 362 428 V304 Z" fill="url(#metal)"/>
+    <path d="M150 356 A106 24 0 0 0 362 356 M150 400 A106 24 0 0 0 362 400" fill="none" stroke="#5a3f10" stroke-opacity=".55" stroke-width="7"/>
+    <path d="M150 356 A106 24 0 0 0 362 356 M150 400 A106 24 0 0 0 362 400" fill="none" stroke="#fff1c4" stroke-opacity=".55" stroke-width="2.5"/>
+    <path d="M150 304 V428 A106 24 0 0 0 362 428 V304" fill="none" stroke="#7a5a18" stroke-opacity=".6" stroke-width="3"/>
+    <ellipse cx="256" cy="304" rx="106" ry="24" fill="#2a1748" stroke="url(#gold)" stroke-width="8"/>
+    <ellipse cx="256" cy="307" rx="90" ry="16" fill="url(#liq)"/>
+    <ellipse cx="256" cy="307" rx="34" ry="7" fill="none" stroke="#fff6d6" stroke-opacity=".85" stroke-width="2.5"/>
+    <ellipse cx="256" cy="307" rx="58" ry="11" fill="none" stroke="#fff6d6" stroke-opacity=".4" stroke-width="2"/>
+    <path d="M178 330 V420" stroke="#fff6d6" stroke-opacity=".35" stroke-width="8" stroke-linecap="round"/>
+    <!-- brilho -->
+    <path d="M394 236 l6 16 16 6 -16 6 -6 16 -6 -16 -16 -6 16 -6 z" fill="#fbe9b0" fill-opacity=".9"/>
+    <path d="M118 254 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4 z" fill="#fbe9b0" fill-opacity=".55"/>
+  </g>
+</g>
 </svg>

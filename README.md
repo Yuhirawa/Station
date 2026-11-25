@@ -20,7 +20,7 @@ Em ⚙️ Configurações: temas *Noite Real*, *Pergaminho*, *Carmesim Imperial*
 ## Publicar no GitHub Pages
 
 1. Crie um repositório novo no GitHub (ex.: `filling-painel`).
-2. Envie **todos** os arquivos desta pasta (incluindo a pasta `icons/`) para a raiz do repositório
+2. Envie **todos** os arquivos desta pasta para a raiz do repositório (não há subpastas — os ícones ficam junto com o index.html)
    — pelo site: *Add file → Upload files* e arraste tudo.
 3. Vá em **Settings → Pages**, em *Source* escolha **Deploy from a branch**, branch `main`, pasta `/ (root)` → **Save**.
 4. Em 1–2 minutos o site fica em `https://SEU-USUARIO.github.io/filling-painel/`.
@@ -40,7 +40,7 @@ No celular, abra o link e use **Adicionar à tela inicial** para usar como aplic
 | `index.html` | Estrutura da página |
 | `style.css` | Visual (tema claro/escuro, responsivo) |
 | `app.js` | Lógica: checklist, janelas, histórico — as etapas e tipos de envase ficam no topo do arquivo, fáceis de editar |
-| `sw.js`, `manifest.webmanifest`, `icons/` | Modo aplicativo/offline |
+| `sw.js`, `manifest.webmanifest`, `icon*.png`, `icon.svg`, `apple-touch-icon.png` | Modo aplicativo/offline |
 
 ## Atualizar para uma versão nova
 
