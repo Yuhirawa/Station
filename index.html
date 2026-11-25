@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=19">
+  <link rel="stylesheet" href="style.css?v=20">
   <script>
     // aplica tema e preferências antes de desenhar (evita "piscar")
     (function () {
@@ -319,6 +319,9 @@
         <label>Status
           <select name="status"></select>
         </label>
+        <label id="veioWrap" class="veio-wrap" hidden>Chegou às
+          <input type="time" name="veioHora" step="60">
+        </label>
         <div class="span-2 field">
           <span class="fl">Horário de chegada</span>
           <div class="seg seg-full" id="horaSeg">
@@ -520,6 +523,17 @@
   </dialog>
 
   <!-- ================= DIÁLOGO: COPIAR PROGRAMAÇÃO ================= -->
+  <dialog id="veioDlg" class="sheet">
+    <div class="sheet-head">
+      <div>
+        <span class="eyebrow">Veio</span>
+        <h2>Hora de chegada</h2>
+      </div>
+      <button type="button" class="icon-btn" data-close aria-label="Fechar"><span data-ic="x"></span></button>
+    </div>
+    <div class="adj" id="veioBody"></div>
+  </dialog>
+
   <dialog id="reagDlg" class="sheet">
     <div class="sheet-head">
       <div>
@@ -605,6 +619,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=19"></script>
+  <script src="app.js?v=20"></script>
 </body>
 </html>

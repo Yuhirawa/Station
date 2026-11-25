@@ -946,7 +946,7 @@ function actionBtn(e, k, small) {
   if (e.status === 'naoveio') return `<span class="arrive">
     <button type="button" class="btn btn-veio ${sm}" data-veio="${e.id}" data-day="${k}">${I.check}${small ? 'Veio' : 'Veio afinal'}</button>
     <button type="button" class="btn btn-reag ${sm}" data-reag="${e.id}" data-day="${k}">${I.calClock}Reagendar</button></span>`;
-  if (e.status === 'veio') return `<span class="veio-badge" title="Confirmado${e.t?.veio ? ' às ' + fmtTime(e.t.veio) : ''}">${I.check}<b>Veio</b>${e.t?.veio ? `<small>${fmtTime(e.t.veio)}</small>` : ''}</span>`;
+  if (e.status === 'veio') return `<button type="button" class="veio-badge" data-veio-time="${e.id}" data-day="${k}" title="Chegou${e.t?.veio ? ' às ' + fmtTime(e.t.veio) : ''} — toque para mudar a hora">${I.check}<b>Veio</b>${e.t?.veio ? `<small>${fmtTime(e.t.veio)}</small>` : ''}<span class="vb-edit">${I.edit}</span></button>`;
   return '';
 }
 function adjustBtn(e, k, small) {
@@ -1131,8 +1131,8 @@ function trow(e, k, sch) {
   </article>`;
 }
 
-function arrivalBand(e) {
-  if (e.status === 'veio') return `<div class="arr-band ok">${I.check}<div><b>Veio — tudo certo</b><small>Confirmado ${e.t?.veio ? `às ${fmtTime(e.t.veio)}` : ''}</small></div></div>`;
+function arrivalBand(e, k) {
+  if (e.status === 'veio') return `<div class="arr-band ok">${I.check}<div><b>Veio — tudo certo</b><small>Chegou ${e.t?.veio ? `às ${fmtTime(e.t.veio)}` : ''}</small></div><button type="button" class="btn btn-ghost btn-sm" data-veio-time="${e.id}" data-day="${k}">${I.clock}Mudar hora</button></div>`;
   if (e.status === 'naoveio') return `<div class="arr-band no">${I.x}<div><b>Não veio</b><small>Marcado ${e.t?.naoveio ? `às ${fmtTime(e.t.naoveio)}` : ''} · fica guardado para reagendar em outro dia</small></div></div>`;
   return '';
 }
@@ -1157,7 +1157,7 @@ function tcard(e, k, sch) {
     ${sub ? `<div class="tc-info">${sub}</div>` : ''}
     <div class="tc-times">${times}</div>
     ${e.motivo && (adjusted || e.ajuste != null) ? `<div class="tc-motivo">Motivo: ${esc(e.motivo)}</div>` : ''}
-    ${arrivalBand(e)}
+    ${arrivalBand(e, k)}
     ${e.obs ? `<div class="tc-obs">${esc(e.obs)}</div>` : ''}
     <div class="prep-dots">
       ${PREP.map((pp) => `<button type="button" class="pdot c-${pp.c} ${e.prep?.[pp.k] ? 'on' : ''}" data-prep-one="${pp.k}" data-env="${e.id}" data-day="${k}" title="${esc(pp.full)}">${e.prep?.[pp.k] ? I.check : I[pp.ic]}${esc(pp.l)}</button>`).join('')}
@@ -1942,6 +1942,7 @@ function markVeio(k, id) {
   e.status = 'veio';
   save(); render();
   celebrateTruck(id);
+  fxVeio(id);
   const undo = () => { e.status = prev.status; e.t = prev.t; e.noshows = prev.noshows; save(); render(); };
   lastUndo = undo;
   const p = plannedOp(e);
@@ -1966,6 +1967,7 @@ function markNaoVeio(k, id) {
   save(); render();
   const el = $(`[data-id="${id}"]`);
   if (el && !matchMedia('(prefers-reduced-motion: reduce)').matches) { el.classList.add('just-no'); setTimeout(() => el.classList.remove('just-no'), 900); }
+  fxNaoVeio(id);
   const undo = () => { e.status = prev.status; e.t = prev.t; e.noshows = prev.noshows; save(); render(); };
   lastUndo = undo;
   toast(`${matName(e)} não veio — fica guardado para reagendar`, 'Desfazer', undo);
@@ -1981,12 +1983,13 @@ function unmarkVeio(k, id) {
   toast('Voltou para aguardando', 'Desfazer', undo);
 }
 // efeito ao confirmar que o caminhão veio
+celebrateTruck.quiet = true; // o efeito completo agora é o fxVeio
 function celebrateTruck(id) {
   const el = $(`.view:not([hidden]) [data-id="${id}"]`) || $(`[data-id="${id}"]`);
   if (!el) return;
   el.classList.add('just-veio');
   setTimeout(() => el.classList.remove('just-veio'), 1600);
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || celebrateTruck.quiet) return;
   const r = (el.querySelector('.veio-badge, .arr-band') || el).getBoundingClientRect();
   const b = document.createElement('div');
   b.className = 'burst';
@@ -2311,6 +2314,8 @@ function openEnv(dayKey, id, slot, pre) {
   if (pre?.hora != null) form.hora.value = opToHHMM(pre.hora);
   updatePercPreview();
   form.status.value = e?.status || 'programado';
+  form.veioHora.value = e?.t?.veio ? opToHHMM(Math.round(msToOp(dayKey, e.t.veio))) : '';
+  $('#veioWrap').hidden = form.status.value !== 'veio';
   form.obs.value = e?.obs || '';
   updateHint();
   updateCatHint(true); // sem produto, sem dica de embalagem
@@ -2338,7 +2343,10 @@ function saveEnv() {
     // status mudou: ajusta os carimbos
     e.t = { ...(e.t || {}) };
     if (data.status !== 'veio') { delete e.t.veio; delete e.t.chegada; delete e.t.inicio; delete e.t.fim; }
-    if (data.status === 'veio') e.t.veio ||= Date.now();
+    if (data.status === 'veio') {
+      const vh = form.veioHora.value;
+      e.t.veio = vh ? opStartMs(editing.day) + hhmmToOp(vh) * 60000 : (e.t.veio || Date.now());
+    }
     if (data.status === 'naoveio') { e.t.naoveio ||= Date.now(); if (old.status !== 'naoveio') e.noshows = [...(e.noshows || []), editing.day]; } else delete e.t.naoveio;
     if (dia !== editing.day) {
       src.splice(i, 1);
@@ -2378,7 +2386,7 @@ document.addEventListener('click', (ev) => {
   if (c('[data-copy-go]')) { doCopyDay(); return; }
   if (c('[data-drag]')) return;
   if ((el = c('[data-ag-view]'))) { S.settings.agView = el.dataset.agView; expanded.clear(); save(); render(); return; }
-  if ((el = c('[data-expand]')) && !c('[data-copy], [data-veio], [data-naoveio], [data-adjust], [data-prep-one]')) {
+  if ((el = c('[data-expand]')) && !c('[data-copy], [data-veio], [data-naoveio], [data-adjust], [data-prep-one], [data-veio-time]')) {
     const id = el.dataset.expand;
     if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
     render();
@@ -2524,10 +2532,9 @@ document.addEventListener('click', (ev) => {
     const k = el.dataset.day, pk = el.dataset.prepOne, env = el.dataset.env;
     const e = setPrep(k, env, pk);
     afterPrep(e, k);
-    if (el.classList.contains('seg')) {
-      const nb = $(`.trow[data-id="${env}"] .seg[data-prep-one="${pk}"]`);
-      if (nb) { nb.classList.add('pop'); setTimeout(() => nb.classList.remove('pop'), 500); }
-      if (e && prepDone(e) === PREP.length) celebrateTruck(env);
+    if (e?.prep?.[pk]) {
+      if (prepDone(e) === PREP.length) { fxStep(env, pk); setTimeout(() => fxReady(env), 380); }
+      else fxStep(env, pk);
     }
     return;
   }
@@ -2535,7 +2542,11 @@ document.addEventListener('click', (ev) => {
     const k = el.dataset.day;
     const e = findTruck(k, el.dataset.prepNext);
     const n = e && nextPrepOf(e);
-    if (n) { setPrep(k, e.id, n.k, true); afterPrep(e, k); }
+    if (n) {
+      setPrep(k, e.id, n.k, true); afterPrep(e, k);
+      fxStep(e.id, n.k);
+      if (prepDone(e) === PREP.length) setTimeout(() => fxReady(e.id), 380);
+    }
     return;
   }
   if ((el = c('[data-step-all]'))) { setStepAll(el.dataset.day, el.dataset.stepAll, !el.dataset.off); return; }
@@ -2775,6 +2786,139 @@ setInterval(() => {
   if (currentTab === 'percurso') { renderTransit(); renderCalcOut(); }
 }, 30000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
+
+/* ================= Animações de cada ação no caminhão =================
+   Cada etapa tem a sua: OP carimba, MSC2N vira o calendário, Rótulos sai
+   da impressora, ODs abre a caixa, Skelta passa o leitor, Revolog gira o
+   relógio e APP vibra o celular. Preparo completo ganha a coroa; Veio, o
+   caminhão chegando; Não veio, o carimbo vermelho. */
+const FX_MS = 1500;
+const fxOff = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function fxTarget(sel, fallbackId) {
+  const all = [...document.querySelectorAll(`.view:not([hidden]) ${sel}`)].filter((x) => x.offsetParent && x.getBoundingClientRect().height > 0);
+  return all[0] || (fallbackId ? [...document.querySelectorAll(`.view:not([hidden]) [data-id="${fallbackId}"]`)].find((x) => x.offsetParent) : null) || null;
+}
+function fxSpawn(el, cls, inner) {
+  if (!el || fxOff()) return null;
+  const r = el.getBoundingClientRect();
+  if (r.bottom < 0 || r.top > innerHeight) return null;
+  const fx = document.createElement('div');
+  fx.className = `fx ${cls}`;
+  fx.style.left = `${r.left + r.width / 2}px`;
+  fx.style.top = `${r.top + r.height / 2}px`;
+  fx.innerHTML = inner;
+  document.body.appendChild(fx);
+  setTimeout(() => fx.remove(), FX_MS + 200);
+  return fx;
+}
+const fxSparks = (n, cls = '') => Array.from({ length: n }, (_, i) => {
+  const a = (i / n) * Math.PI * 2 + Math.random() * 0.4, d = 30 + Math.random() * 34;
+  return `<i class="sp ${cls}" style="--dx:${(Math.cos(a) * d).toFixed(1)}px;--dy:${(Math.sin(a) * d).toFixed(1)}px;--rot:${Math.round(Math.random() * 300)}deg;animation-delay:${(0.12 + Math.random() * 0.1).toFixed(2)}s"></i>`;
+}).join('');
+const STEP_FX = {
+  op: () => `<span class="fx-ico stamp">${I.clipboard}</span><span class="fx-ring"></span>${fxSparks(10, 'sq')}`,
+  msc2n: () => `<span class="fx-ico flip">${I.calCheck}</span>${Array.from({ length: 5 }, (_, i) => `<i class="page" style="--i:${i}"></i>`).join('')}`,
+  rot: () => `<span class="fx-ico">${I.printer}</span><i class="label-strip"><b></b><b></b><b></b></i>`,
+  od: () => `<span class="fx-ico bounce">${I.package}</span>${Array.from({ length: 6 }, (_, i) => `<i class="cube" style="--a:${-150 + i * 24}deg;--i:${i}"></i>`).join('')}`,
+  skelta: () => `<span class="fx-ico">${I.barcode}<i class="laser"></i></span>${fxSparks(8)}`,
+  revolog: () => `<span class="fx-ico spin">${I.calClock}</span>${Array.from({ length: 12 }, (_, i) => `<i class="tick" style="--a:${i * 30}deg;--i:${i}"></i>`).join('')}`,
+  app: () => `<span class="fx-ico buzz">${I.phone}</span><i class="wave"></i><i class="wave w2"></i><i class="wave w3"></i>`,
+};
+function fxStep(env, pk) {
+  const p = PREP.find((x) => x.k === pk);
+  if (!p) return;
+  const el = fxTarget(`[data-prep-one="${pk}"][data-env="${env}"]`, env);
+  fxSpawn(el, `fx-step fx-${pk} c-${p.c}`, `${STEP_FX[pk]?.() || ''}<em class="fx-label">${esc(p.l)} ✓</em>`);
+  if (el) { el.classList.add('fx-hit'); setTimeout(() => el.classList.remove('fx-hit'), 600); }
+}
+function fxReady(env) {
+  const el = fxTarget(`[data-id="${env}"]`);
+  fxSpawn(el, 'fx-ready', `<span class="fx-crown">${I.crown}</span>${fxSparks(16, 'gold')}<em class="fx-label big">Pronto para envase!</em>`);
+}
+function fxVeio(env) {
+  const el = fxTarget(`[data-id="${env}"] .veio-badge`, env) || fxTarget(`[data-id="${env}"]`);
+  fxSpawn(el, 'fx-veio', `<span class="fx-road"></span><span class="fx-truck">${I.truck}</span><span class="fx-ok">${I.check}</span>${fxSparks(14, 'ok')}<em class="fx-label big">Chegou!</em>`);
+}
+function fxNaoVeio(env) {
+  const el = fxTarget(`[data-id="${env}"] .ns-ribbon`, env) || fxTarget(`[data-id="${env}"]`);
+  fxSpawn(el, 'fx-no', `<span class="fx-stampx">${I.x}<b>Não veio</b></span>`);
+}
+
+/* ----- hora em que o caminhão chegou ----- */
+let veioEdit = null;
+function openVeioTime(k, id) {
+  const e = findTruck(k, id);
+  if (!e) return;
+  veioEdit = { k, id };
+  const planned = e.ajuste ?? plannedOp(e);
+  const cur = e.t?.veio ? opToHHMM(Math.round(msToOp(k, e.t.veio))) : opToHHMM(Math.round(msToOp(k, Date.now())));
+  $('#veioBody').innerHTML = `
+    <div class="reag-truck ok">${mono(e)}<div><b>${esc(matName(e))}</b><small>${planned != null ? `Programado para ${opToHHMM(planned)}` : 'Sem horário programado'}</small></div></div>
+    <label class="fl" for="veioHora">Que horas ele chegou?</label>
+    <div class="veio-time-row">
+      <input type="time" id="veioHora" value="${cur}" step="60">
+      <div class="veio-quick">
+        <button type="button" class="chip-btn" data-vq="now">Agora</button>
+        ${planned != null ? `<button type="button" class="chip-btn" data-vq="${opToHHMM(planned)}">No horário · ${opToHHMM(planned)}</button>` : ''}
+        <button type="button" class="chip-btn" data-vq="-5">−5 min</button>
+        <button type="button" class="chip-btn" data-vq="+5">+5 min</button>
+      </div>
+    </div>
+    <p class="veio-diff" id="veioDiff"></p>
+    <div class="sheet-foot"><span class="spacer"></span><button type="button" class="btn btn-ghost" data-close>Cancelar</button><button type="button" class="btn btn-veio" data-veio-save>${I.check}Salvar hora</button></div>`;
+  updateVeioDiff();
+  $('#veioDlg').showModal();
+}
+function updateVeioDiff() {
+  if (!veioEdit) return;
+  const e = findTruck(veioEdit.k, veioEdit.id);
+  const v = $('#veioHora').value, box = $('#veioDiff');
+  const planned = e && (e.ajuste ?? plannedOp(e));
+  if (!v || planned == null) { box.textContent = ''; return; }
+  const d = Math.round(hhmmToOp(v) - planned);
+  box.className = `veio-diff ${d > 10 ? 'late' : d < -10 ? 'early' : 'ok'}`;
+  const span = fmtDelta(Math.abs(d)).replace(/^[+−-]/, '');
+  box.textContent = Math.abs(d) <= 10 ? 'Chegou no horário ✓' : d > 0 ? `Chegou ${span} depois do programado` : `Chegou ${span} antes do programado`;
+}
+function saveVeioTime() {
+  if (!veioEdit) return;
+  const { k, id } = veioEdit;
+  const e = findTruck(k, id);
+  const v = $('#veioHora').value;
+  if (!e || !v) { $('#veioHora').focus(); return; }
+  const prev = { status: e.status, t: { ...e.t } };
+  e.t ||= {};
+  e.t.veio = opStartMs(k) + hhmmToOp(v) * 60000;
+  delete e.t.naoveio;
+  const was = e.status;
+  e.status = 'veio';
+  save();
+  $('#veioDlg').close();
+  render();
+  if (was !== 'veio') { celebrateTruck(id); fxVeio(id); }
+  const undo = () => { e.status = prev.status; e.t = prev.t; save(); render(); };
+  lastUndo = undo;
+  const planned = e.ajuste ?? plannedOp(e);
+  const late = planned != null ? hhmmToOp(v) - planned : 0;
+  if (late > 10) toast(`Chegou às ${v} (${fmtDelta(late).replace(/^[+]/, '')} de atraso). Ajustar o horário?`, 'Ajustar', () => openAdjust(k, id, { motivo: 'Atraso do veículo', value: Math.round(hhmmToOp(v)) }));
+  else toast(`Hora de chegada: ${v}`, 'Desfazer', undo);
+}
+document.addEventListener('click', (ev) => {
+  const q = ev.target.closest('[data-vq]');
+  if (q) {
+    const inp = $('#veioHora'), a = q.dataset.vq;
+    if (a === 'now') inp.value = opToHHMM(Math.round(msToOp(veioEdit.k, Date.now())));
+    else if (/^[+-]\d+$/.test(a)) inp.value = opToHHMM(hhmmToOp(inp.value || '00:00') + Number(a));
+    else inp.value = a;
+    updateVeioDiff();
+    return;
+  }
+  if (ev.target.closest('[data-veio-save]')) saveVeioTime();
+  const vt = ev.target.closest('[data-veio-time]');
+  if (vt) { ev.stopPropagation(); openVeioTime(vt.dataset.day, vt.dataset.veioTime); }
+}, true);
+document.addEventListener('input', (ev) => { if (ev.target.id === 'veioHora') updateVeioDiff(); });
+document.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' && ev.target.id === 'veioHora') { ev.preventDefault(); saveVeioTime(); } });
 
 /* ================= Planilha de materiais e embalagens =================
    O Excel é lido aqui mesmo no navegador (sem enviar para lugar nenhum)
@@ -3110,6 +3254,10 @@ form.material.addEventListener('change', () => {
   updateCatHint(true); catApplyTipo();
 });
 form.tipo.addEventListener('change', (ev) => { if (ev.isTrusted) tipoTouched = true; });
+form.status.addEventListener('change', () => {
+  $('#veioWrap').hidden = form.status.value !== 'veio';
+  if (form.status.value === 'veio' && !form.veioHora.value) form.veioHora.value = opToHHMM(Math.round(msToOp(editing.day, Date.now())));
+});
 form.pesoT.addEventListener('input', updateCatHint);
 function catDatalist() {
   const ix = catIndex();
