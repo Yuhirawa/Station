@@ -1,7 +1,7 @@
 // Service worker: funciona offline e sempre busca a versão mais nova quando há internet.
 // Ao publicar uma versão nova, troque o número abaixo e o ?v= no index.html.
-const CACHE = 'filling-v20';
-const ASSETS = ['./', './index.html', './style.css?v=20', './app.js?v=20', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable.png', './apple-touch-icon.png'];
+const CACHE = 'filling-v25';
+const ASSETS = ['./', './index.html', './style.css?v=25', './app.js?v=25', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));

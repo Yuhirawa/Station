@@ -348,12 +348,12 @@ const matName = (e) => splitMat(e.material).name;
 // etiquetas do caminhão — tocar copia o valor (para colar nos sistemas)
 const copyChip = (cls, icon, label, value, extra = '') =>
   `<span class="ichip copyable ${cls}" role="button" tabindex="0" data-copy="${esc(value)}" title="Toque para copiar ${esc(value)}">${icon}${label} ${esc(value)}${extra}</span>`;
-function infoChips(e, k) {
+function infoChips(e, k, noEmb) {
   const out = [];
   const mc = splitMat(e.material).code;
   if (mc) out.push(copyChip('code', I.barcode, 'Material', mc));
   const cl = catLookup(e.material);
-  if (cl.state === 'ok') {
+  if (cl.state === 'ok' && !noEmb) {
     const it = cl.it, q = embQty(it, e.peso);
     const nm = embNice(it[3]) || 'Embalagem';
     if (it[2] && it[2] !== 'NA') out.push(copyChip('emb', embIcon(it[3]), esc(nm), it[2], q ? ` · ${q} un` : ''));
@@ -646,8 +646,10 @@ function toast(msg, action, fn) {
 }
 
 // tema (Noite Real, Pergaminho, Carmesim, Cavaleiro), cor de destaque, densidade e tamanho da letra
-const LIGHT_THEMES = ['light', 'sage', 'sakura', 'winter'];
-const THEME_ACCENT = { knight: 'silver', midnight: 'silver', winter: 'silver', sakura: 'ruby' };
+const LIGHT_THEMES = ['light', 'sage', 'sakura', 'winter', 'sand', 'lavender', 'azulejo', 'siamesclaro'];
+// silhueta de uma siamesa sentada (tema Aurora)
+const CAT_MARK = '<svg viewBox="0 0 24 24"><path class="d" d="M7 9.2V3.4l3.1 2.7h3.8L17 3.4v5.8c0 2.9-2.2 4.6-5 4.6s-5-1.7-5-4.6z"/><path d="M7 9.2V3.4l3.1 2.7h3.8L17 3.4v5.8c0 2.9-2.2 4.6-5 4.6s-5-1.7-5-4.6z"/><path d="M9 13.2C6.8 14.8 6.2 17.8 6.7 21.2h10.6c.5-3.4-.1-6.4-2.3-8"/><path d="M17.3 21.2c2.6.2 3.9-1.6 3-4.1"/><path d="M10.6 11.4l1.4.9 1.4-.9M12 12.3v.9"/><circle class="eye" cx="9.9" cy="9.1" r="1"/><circle class="eye" cx="14.1" cy="9.1" r="1"/><path d="M5.2 10.6l-2.4-.5M5.3 12l-2.3.5M18.8 10.6l2.4-.5M18.7 12l2.3.5"/></svg>';
+const THEME_ACCENT = { knight: 'silver', midnight: 'silver', winter: 'silver', sakura: 'ruby', aurora: 'emerald', lavender: 'amethyst', azulejo: 'sapphire' };
 function applyTheme() {
   const st = S.settings;
   let t = st.theme || 'dark';
@@ -736,7 +738,7 @@ function renderHero() {
   chips += `<span class="chip">${I.back}Dia anterior de envase: ${fmtShort(prevOpDay(now))}</span>`;
 
   $('#hero').innerHTML = `
-    <div class="hero-crest">${I.crest}</div>
+    <div class="hero-crest"><span class="crest-mark">${I.crest}</span><span class="cat-mark">${CAT_MARK}</span></div>
     <div class="ring" role="img" aria-label="${p.pct}% concluído">
       <svg viewBox="0 0 112 112">
         <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
@@ -1086,11 +1088,21 @@ function occupiesTxt(e) {
   }
   return ` · ocupa ${list.join(' + ')}`;
 }
-// visão resumida: uma linha por caminhão (horário grande, nome, status, preparo e próxima ação)
-const expanded = new Set();
+// visão resumida: os cartões já vêm abertos; dá para minimizar cada um (vira uma linha)
+const minimized = new Set();
+const expanded = minimized; // nome antigo, usado em outros pontos
 const agView = () => S.settings.agView || 'compact';
 function truckView(e, k, sch) {
-  return agView() === 'compact' && !expanded.has(e.id) ? trow(e, k, sch) : tcard(e, k, sch);
+  return agView() === 'compact' && minimized.has(e.id) ? trow(e, k, sch) : tcard(e, k, sch);
+}
+function updateMinAll(k) {
+  const b = $('#minAllBtn');
+  if (!b) return;
+  const ids = getPlan(k).map((e) => e.id);
+  b.hidden = agView() !== 'compact' || !ids.length;
+  const allMin = ids.length && ids.every((id) => minimized.has(id));
+  b.dataset.state = allMin ? 'open' : 'min';
+  b.querySelector('span:last-child').textContent = allMin ? 'Abrir todos' : 'Minimizar todos';
 }
 function trow(e, k, sch) {
   const p = plannedOp(e), s = startOp(e, k), en = endOp(e, k);
@@ -1127,10 +1139,21 @@ function trow(e, k, sch) {
       <span class="segs">${PREP.map((pp) => `<button type="button" class="seg c-${pp.c} ${e.prep?.[pp.k] ? 'on' : ''}" data-prep-one="${pp.k}" data-env="${e.id}" data-day="${k}" title="${esc(pp.full)} — ${e.prep?.[pp.k] ? 'feito (toque para desmarcar)' : 'toque para confirmar'}" aria-pressed="${e.prep?.[pp.k] ? 'true' : 'false'}">${esc(pp.l)}</button>`).join('')}</span>
       <small class="${pd === PREP.length ? 'ok' : ''}">${pd === PREP.length ? `${I.check}Pronto` : `${pd}/7`}</small>
     </div>
-    <div class="trow-act">${actionBtn(e, k, true)}<button type="button" class="icon-btn trow-more" data-expand="${e.id}" aria-label="Abrir detalhes">${I.chev}</button></div>
+    <div class="trow-act">${actionBtn(e, k, true)}<button type="button" class="icon-btn trow-more" data-expand="${e.id}" aria-label="Abrir cartão" title="Abrir cartão">${I.chev}</button></div>
   </article>`;
 }
 
+function embPanel(e) {
+  const cl = catLookup(e.material);
+  if (cl.state !== 'ok') return '';
+  const it = cl.it, q = embQty(it, e.peso), kg = kgOf(it[1]);
+  return `<div class="emb-panel">
+    <span class="ep-art">${embArt(it[3])}</span>
+    <div class="ep-info"><small>Embalagem</small><b>${esc(embNice(it[3]) || 'Sem nome')}</b>
+      <span>${kg ? `${fmtNum(kg)} kg cada` : ''}${kg && q ? ' · ' : ''}${q ? `≈ ${q} embalage${q === 1 ? 'm' : 'ns'}` : ''}</span></div>
+    ${it[2] && it[2] !== 'NA' ? `<button type="button" class="ep-code copyable" data-copy="${esc(it[2])}" title="Copiar código da embalagem"><small>Código</small><b>${esc(it[2])}</b>${I.copy}</button>` : '<span class="ep-code none"><small>Código</small><b>—</b></span>'}
+  </div>`;
+}
 function arrivalBand(e, k) {
   if (e.status === 'veio') return `<div class="arr-band ok">${I.check}<div><b>Veio — tudo certo</b><small>Chegou ${e.t?.veio ? `às ${fmtTime(e.t.veio)}` : ''}</small></div><button type="button" class="btn btn-ghost btn-sm" data-veio-time="${e.id}" data-day="${k}">${I.clock}Mudar hora</button></div>`;
   if (e.status === 'naoveio') return `<div class="arr-band no">${I.x}<div><b>Não veio</b><small>Marcado ${e.t?.naoveio ? `às ${fmtTime(e.t.naoveio)}` : ''} · fica guardado para reagendar em outro dia</small></div></div>`;
@@ -1141,7 +1164,7 @@ function tcard(e, k, sch) {
   const adjusted = p != null && s != null && Math.round(s) !== Math.round(p);
   const late = lateNoShow(e, k);
   const ov = sch?.overlaps.find((x) => x.e.id === e.id);
-  const sub = infoChips(e, k);
+  const sub = infoChips(e, k, true);
   const pd = prepDone(e);
   const t = TYPES[e.tipo] || TYPES.padrao;
   let times = '';
@@ -1152,9 +1175,10 @@ function tcard(e, k, sch) {
 
   return `<article class="tcard st-${e.status}" data-id="${e.id}">
     <div class="tc-top"><button type="button" class="grip" data-drag="${e.id}" data-day="${k}" title="Arraste para outra janela ou outro dia" aria-label="Arrastar caminhão">${I.grip}</button>${mono(e)}<span class="tc-clock">${s != null ? opToHHMM(s) : '—'}</span><span class="muted small">${esc(t.n)} · ${fmtNum(weightOf(e))} jan.${occupiesTxt(e)}</span><span class="spacer"></span>
-      ${late ? `<span class="delay alarm">sem chegada ${fmtDelta(late)}</span>` : ''}${ov ? `<span class="delay alarm">sobrepõe ${Math.round(ov.overlap)} min</span>` : ''}${statusPill(e)}${agView() === 'compact' ? `<button type="button" class="icon-btn tc-collapse" data-expand="${e.id}" aria-label="Recolher" title="Recolher">${I.chev}</button>` : ''}</div>
+      ${late ? `<span class="delay alarm">sem chegada ${fmtDelta(late)}</span>` : ''}${ov ? `<span class="delay alarm">sobrepõe ${Math.round(ov.overlap)} min</span>` : ''}${statusPill(e)}${agView() === 'compact' ? `<button type="button" class="icon-btn tc-collapse" data-expand="${e.id}" aria-label="Minimizar" title="Minimizar">${I.chev}</button>` : ''}</div>
     <div class="tc-mat" data-edit="${e.id}" data-day="${k}">${esc(matName(e))}</div>
     ${sub ? `<div class="tc-info">${sub}</div>` : ''}
+    ${embPanel(e)}
     <div class="tc-times">${times}</div>
     ${e.motivo && (adjusted || e.ajuste != null) ? `<div class="tc-motivo">Motivo: ${esc(e.motivo)}</div>` : ''}
     ${arrivalBand(e, k)}
@@ -1167,10 +1191,20 @@ function tcard(e, k, sch) {
   </article>`;
 }
 
+let lastAgDay = null;
 function renderAgenda() {
   const k = agDay;
+  // troca de dia: as páginas deslizam para o lado certo
+  if (lastAgDay && lastAgDay !== k && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const v = $('#view-agenda');
+    v.removeAttribute('data-slide'); void v.offsetWidth;
+    v.dataset.slide = k > lastAgDay ? 'next' : 'prev';
+    clearTimeout(renderAgenda.t); renderAgenda.t = setTimeout(() => v.removeAttribute('data-slide'), 500);
+  }
+  lastAgDay = k;
   $$('[data-ag-view]').forEach((b) => b.classList.toggle('active', b.dataset.agView === agView()));
   $('#view-agenda').dataset.view = agView();
+  updateMinAll(k);
   const d = fromKey(k);
   $('#agDays').innerHTML = dayPicker(k, 'ag');
   const banner = $('#agBanner');
@@ -1281,6 +1315,8 @@ function renderCapacity(k, list, L, sch) {
     ${alerts.length ? `<div class="alerts">${alerts.join('')}</div>` : `<div class="cap-ok">${I.check}Nenhum conflito no dia</div>`}
     <div class="cap-actions">
       <button class="btn btn-ghost hide-mobile" data-add-slot="">${I.plus} Novo caminhão</button>
+      <button class="btn btn-ghost" data-report="${k}" ${getPlan(k).length ? '' : 'disabled'}>${I.report} Relatório do dia</button>
+      <button class="btn btn-ghost" data-xls-open="day" data-day="${k}">${I.download} Excel</button>
       <button class="btn btn-ghost" data-copy-day ${act.length ? '' : 'disabled'}>${I.copyDay} Copiar programação</button>
     </div></div>`;
 }
@@ -1391,7 +1427,7 @@ function renderHistory() {
     const rot = Object.values(day.routine || {}).filter((r) => r?.at).length;
     const plan = active(getPlan(k));
     const conc = plan.filter((e) => e.status === 'veio').length;
-    const delays = plan.map((e) => (e.t?.chegada && plannedOp(e) != null ? msToOp(k, e.t.chegada) - plannedOp(e) : null)).filter((v) => v != null);
+    const delays = plan.map((e) => { const tv = e.t?.veio || e.t?.chegada; return tv && plannedOp(e) != null ? msToOp(k, tv) - plannedOp(e) : null; }).filter((v) => v != null);
     const avgDelay = delays.length ? delays.reduce((a, v) => a + Math.max(0, v), 0) / delays.length : null;
     return { x, k, has, p, rot, plan, conc, avgDelay, notes: day.notes };
   });
@@ -1401,7 +1437,7 @@ function renderHistory() {
   const dl = rows.filter((r) => r.avgDelay != null);
   const avgDelay = dl.length ? dl.reduce((a, r) => a + r.avgDelay, 0) / dl.length : null;
 
-  $('#history').innerHTML = `
+  $('#history').innerHTML = statsHtml() + `
     <div class="hist-cards">
       <div class="stat"><small>Média de conclusão</small><b data-count="hist-avg" data-to="${avg}" data-suffix="%">${avg}%</b></div>
       <div class="stat"><small>Dias 100%</small><b>${withData.filter((r) => r.p.pct === 100).length}</b></div>
@@ -1918,7 +1954,7 @@ function doCopyDay() {
 function renderClock() { const n = new Date(); $('#clock').textContent = `${pad(n.getHours())}:${pad(n.getMinutes())}`; }
 function render() {
   renderClock();
-  if (currentTab === 'hoje') { renderHero(); renderNextStep(); renderSeq(); renderTodayTrucks(); renderRotina(); renderNotes(); }
+  if (currentTab === 'hoje') { renderHero(); renderNextStep(); renderSeq(); renderTodayTrucks(); renderCountdown(); renderRotina(); renderNotes(); }
   if (currentTab === 'agenda') renderAgenda();
   if (currentTab === 'preparo') renderPreparo();
   if (currentTab === 'percurso') renderPercurso();
@@ -2385,6 +2421,13 @@ document.addEventListener('click', (ev) => {
   if (c('[data-copy-day]')) { openCopyDay(); return; }
   if (c('[data-copy-go]')) { doCopyDay(); return; }
   if (c('[data-drag]')) return;
+  if (c('[data-min-all]')) {
+    const k = agDay, ids = getPlan(k).map((e) => e.id);
+    const allMin = ids.length && ids.every((id) => minimized.has(id));
+    ids.forEach((id) => (allMin ? minimized.delete(id) : minimized.add(id)));
+    render();
+    return;
+  }
   if ((el = c('[data-ag-view]'))) { S.settings.agView = el.dataset.agView; expanded.clear(); save(); render(); return; }
   if ((el = c('[data-expand]')) && !c('[data-copy], [data-veio], [data-naoveio], [data-adjust], [data-prep-one], [data-veio-time]')) {
     const id = el.dataset.expand;
@@ -2714,7 +2757,7 @@ function toggleTheme() {
   else { st.lastLight = cur || 'light'; st.theme = st.lastDark || 'dark'; }
   save(); applyTheme(); toast(`Tema: ${THEME_NAMES[st.theme]}`);
 }
-const THEME_NAMES = { auto: 'Automático', dark: 'Noite Real', light: 'Pergaminho', crimson: 'Carmesim Imperial', knight: 'Cavaleiro Negro', emerald: 'Esmeralda Imperial', ocean: 'Safira Profunda', midnight: 'Céu Lunar', sage: 'Sálvia & Marfim', sakura: 'Sakura', winter: 'Névoa de Inverno' };
+const THEME_NAMES = { auto: 'Automático', dark: 'Noite Real', light: 'Pergaminho', crimson: 'Carmesim Imperial', knight: 'Cavaleiro Negro', emerald: 'Esmeralda Imperial', ocean: 'Safira Profunda', midnight: 'Céu Lunar', sage: 'Sálvia & Marfim', sakura: 'Sakura', winter: 'Névoa de Inverno', obsidian: 'Ouro Negro', aurora: 'Aurora Boreal', chem: 'Laboratório', sand: 'Areia & Terracota', lavender: 'Lavanda', azulejo: 'Azulejo', siames: 'Aurora (siamesa)', siamesclaro: 'Aurora clara' };
 $('#nameInput').addEventListener('change', (ev) => { S.settings.name = ev.target.value.trim().slice(0, 30); save(); render(); });
 $('#exportBtn').addEventListener('click', async () => {
   const prot = !!SEC.vault;
@@ -2781,11 +2824,487 @@ setInterval(() => {
   renderClock();
   const busy = document.querySelector('dialog[open]') || document.activeElement?.matches('input, textarea, select');
   if (busy) return;
-  if (currentTab === 'hoje') { renderHero(); renderTodayTrucks(); }
+  if (currentTab === 'hoje') { renderHero(); renderTodayTrucks(); renderCountdown(); }
   if (currentTab === 'agenda' && agDay === currentOpDayKey()) render();
   if (currentTab === 'percurso') { renderTransit(); renderCalcOut(); }
 }, 30000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
+
+/* ================= Relatório do dia (texto pronto para WhatsApp / e-mail) ================= */
+Object.assign(I, {
+  share: sv('<circle class="d" cx="18" cy="5" r="3"/><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>'),
+  whats: sv('<path class="d" d="M20.5 11.6a8.5 8.5 0 0 1-12.6 7.5L3.5 20.5l1.4-4.3a8.5 8.5 0 1 1 15.6-4.6z"/><path d="M20.5 11.6a8.5 8.5 0 0 1-12.6 7.5L3.5 20.5l1.4-4.3a8.5 8.5 0 1 1 15.6-4.6z"/><path d="M9 8.5c0 3.5 2.8 6.5 6.5 6.5l1-1.6-2-1-1 1c-1.2-.5-2.3-1.6-2.9-2.9l1-1-1-2z"/>'),
+  mail: sv('<rect class="d" x="3" y="5" width="18" height="14" rx="2"/><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/>'),
+  report: sv('<path class="d" d="M6 3h9l4 4v14H6z"/><path d="M6 3h9l4 4v14H6zM15 3v4h4M9 12h7M9 16h5M9 8h3"/>'),
+});
+const REP_OPTS_DEF = { codes: true, docs: true, emb: true, reps: true, prep: true, alerts: true };
+const repOpts = () => ({ ...REP_OPTS_DEF, ...(S.settings.repOpts || {}) });
+let repDay = null;
+function dayReport(k, o = repOpts()) {
+  const d = fromKey(k);
+  const all = getPlan(k).filter((e) => e.status !== 'cancelado');
+  const sch = schedule(k);
+  const when = new Map(sch.items.map((x) => [x.e.id, x]));
+  const act = active(getPlan(k));
+  const veio = act.filter((e) => e.status === 'veio').length;
+  const ns = all.filter(isNoShow).length;
+  const ag = act.filter((e) => e.status === 'programado').length;
+  const L = layout(getPlan(k));
+  const lines = [];
+  lines.push(`*Filling · Programação ${fmtDM(d)} (${WDL[d.getDay()]})*`);
+  const parts = [`${all.length} caminh${all.length === 1 ? 'ão' : 'ões'}`];
+  if (veio) parts.push(`${veio} ${veio === 1 ? 'veio' : 'vieram'}`);
+  if (ns) parts.push(`${ns} não ${ns === 1 ? 'veio' : 'vieram'}`);
+  if (ag) parts.push(`${ag} aguardando`);
+  lines.push(parts.join(' · '));
+  lines.push(`Janelas: ${fmtNum(L.used)} de ${CAP}${L.used > CAP + 1e-9 ? ' ⚠️ acima da capacidade' : ''}`);
+  if (!all.length) { lines.push('', 'Nenhum caminhão programado.'); return lines.join('\n'); }
+  const sorted = [...all].sort((a, b) => (startOp(a, k) ?? plannedOp(a) ?? 9999) - (startOp(b, k) ?? plannedOp(b) ?? 9999));
+  const icon = { veio: '✅', naoveio: '❌', programado: '⏳' };
+  const turnoEmoji = ['🌅', '🌇', '🌙'];
+  let lastTurno = -1;
+  sorted.forEach((e) => {
+    const x = when.get(e.id);
+    const st = x ? x.s : plannedOp(e);
+    const si = slotIdx(e.slot);
+    const tu = si >= 0 ? SLOTS[si].turno : st != null ? SLOTS.reduce((best, s2, i) => (slotOp(s2) <= st ? i : best), 0) : -1;
+    const tIdx = tu >= 0 ? (si >= 0 ? tu : SLOTS[tu].turno) : -1;
+    if (tIdx !== lastTurno && tIdx >= 0) { lines.push('', `${turnoEmoji[tIdx]} *${TURNOS[tIdx].n}*`); lastTurno = tIdx; }
+    const { code } = splitMat(e.material);
+    let head = `${icon[e.status] || '•'} ${st != null ? opToHHMM(st) : '--:--'} · ${matName(e)}${o.codes && code ? ` (${code})` : ''}`;
+    if (e.status === 'veio') head += ` — veio${e.t?.veio ? ` ${fmtTime(e.t.veio)}` : ''}`;
+    else if (e.status === 'naoveio') head += ' — NÃO VEIO (guardado para reagendar)';
+    else head += ' — aguardando';
+    if (isImp(e)) head += ' · imprevisto';
+    lines.push(head);
+    const det = [];
+    if (o.docs) { if (e.os) det.push(`Ordem ${e.os}`); if (e.op) det.push(`Lote ${e.op}`); if (e.ticket) det.push(`Ticket ${e.ticket}`); }
+    if (o.emb) { const cl = catLookup(e.material); if (cl.state === 'ok') { const q = embQty(cl.it, e.peso); det.push(`${embNice(cl.it[3])}${cl.it[2] && cl.it[2] !== 'NA' ? ` ${cl.it[2]}` : ''}${q ? ` · ${q} un` : ''}`); } }
+    if (e.peso) det.push(`${fmt3(e.peso)} kg`);
+    if (det.length) lines.push(`   ${det.join(' · ')}`);
+    if (o.reps) {
+      const reps = getReps(e).filter((r) => r.qtd || r.lote);
+      if (reps.length) lines.push(`   Reprocesso: ${reps.map((r) => `${r.qtd ? `${fmt3(r.qtd)} ${r.un || 'kg'}` : ''}${r.lote ? ` (lote ${r.lote})` : ''}`.trim()).join(' + ')}`);
+      else if (e.semRep) lines.push('   Sem reprocesso');
+    }
+    if (o.prep && e.status === 'programado') { const pd = prepDone(e); if (pd < PREP.length) lines.push(`   Preparo ${pd}/${PREP.length} · falta: ${PREP.filter((pp) => !e.prep?.[pp.k]).map((pp) => pp.l).join(', ')}`); }
+    if (x && x.p != null && Math.round(x.s - x.p) > 5) lines.push(`   Atraso: +${fmtDelta(x.s - x.p).replace(/^[+]/, '')}${e.motivo ? ` (${e.motivo})` : ''}`);
+  });
+  if (o.alerts) {
+    const al = [];
+    sch.overlaps?.forEach((ov) => al.push(`${matName(ov.b?.e || ov.e || {})} sobrepõe o anterior em ${Math.round(ov.overlap)} min`));
+    L.occ.forEach((oc, i) => { if (oc.fill > 1 + 1e-9) al.push(`Janela ${SLOTS[i].t} sobrecarregada`); });
+    if (al.length) lines.push('', '⚠️ *Atenção*', ...al.map((a) => `• ${a}`));
+  }
+  const pend = pendingNoShows(k).filter((x) => x.k < k);
+  if (pend.length) lines.push('', `📌 Aguardando reagendar: ${pend.map(({ k: kk, e }) => `${matName(e)} (${fmtDM(fromKey(kk))})`).join(', ')}`);
+  return lines.join('\n');
+}
+function openReport(k) {
+  repDay = k || (currentTab === 'agenda' ? agDay : currentOpDayKey() || todayKey());
+  const o = repOpts();
+  $('#repOpts').innerHTML = [['codes', 'Códigos'], ['docs', 'Ordem, lote e ticket'], ['emb', 'Embalagem'], ['reps', 'Reprocesso'], ['prep', 'Preparo pendente'], ['alerts', 'Alertas']]
+    .map(([key, l]) => `<label class="rep-opt"><input type="checkbox" data-rep-opt="${key}" ${o[key] ? 'checked' : ''}><span>${l}</span></label>`).join('');
+  $('#repTitle').textContent = `Relatório de ${fmtShort(fromKey(repDay))}`;
+  $('#repText').value = dayReport(repDay, o);
+  $('#repShare').hidden = !navigator.share;
+  $('#repDlg').showModal();
+}
+document.addEventListener('change', (ev) => {
+  const t = ev.target.closest('[data-rep-opt]');
+  if (!t) return;
+  S.settings.repOpts = { ...repOpts(), [t.dataset.repOpt]: t.checked };
+  save();
+  $('#repText').value = dayReport(repDay);
+});
+document.addEventListener('click', async (ev) => {
+  const b = ev.target.closest('[data-rep-act]');
+  if (b) {
+    const txt = $('#repText').value;
+    const plain = txt.replace(/\*/g, '');
+    const subj = `Filling · Programação ${fmtDM(fromKey(repDay))}`;
+    const a = b.dataset.repAct;
+    if (a === 'copy') { try { await navigator.clipboard.writeText(txt); toast('Relatório copiado'); } catch (e) { $('#repText').select(); document.execCommand('copy'); toast('Relatório copiado'); } }
+    if (a === 'whats') window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank', 'noopener');
+    if (a === 'mail') location.href = `mailto:?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(plain)}`;
+    if (a === 'share') { try { await navigator.share({ title: subj, text: txt }); } catch (e) { /* cancelado */ } }
+    return;
+  }
+  const o = ev.target.closest('[data-report]');
+  if (o) openReport(o.dataset.report || null);
+});
+
+/* ================= Números da semana / mês ================= */
+let statsPeriod = 'week';
+function periodRange(p) {
+  const now = new Date(); now.setHours(12, 0, 0, 0);
+  const startOfWeek = (d) => { const x = new Date(d); const wd = (x.getDay() + 6) % 7; x.setDate(x.getDate() - wd); return x; };
+  if (p === 'week') { const a = startOfWeek(now); return [a, addDays(a, 6), 'Esta semana']; }
+  if (p === 'lastweek') { const a = addDays(startOfWeek(now), -7); return [a, addDays(a, 6), 'Semana passada']; }
+  if (p === 'month') { const a = new Date(now.getFullYear(), now.getMonth(), 1, 12); return [a, new Date(now.getFullYear(), now.getMonth() + 1, 0, 12), 'Este mês']; }
+  const a = new Date(now.getFullYear(), now.getMonth() - 1, 1, 12);
+  return [a, new Date(now.getFullYear(), now.getMonth(), 0, 12), 'Mês passado'];
+}
+function computeStats(p) {
+  const [a, b, label] = periodRange(p);
+  return computeStatsRange(keyOf(a), keyOf(b), label);
+}
+function computeStatsRange(ka, kb, label) {
+  const a = fromKey(ka), b = fromKey(kb), today = todayKey();
+  const days = [];
+  for (let d = new Date(a); keyOf(d) <= kb; d = addDays(d, 1)) if (isOpDay(d) || S.plan[keyOf(d)]?.length) days.push(keyOf(d));
+  const r = { label, ka, kb, days: [], veio: 0, naoveio: 0, aguardando: 0, total: 0, onTime: 0, late: 0, lateSum: 0, early: 0, peso: 0, repKg: 0, repN: 0, semRep: 0, mats: new Map(), embs: new Map(), tipos: new Map(), imps: 0, prepFull: 0 };
+  // faltas registradas (mesmo de caminhões que depois foram reagendados)
+  const nsByDay = {};
+  Object.values(S.plan).forEach((list) => list.forEach((e) => (e.noshows || []).forEach((nk) => { if (nk >= ka && nk <= kb) { nsByDay[nk] = (nsByDay[nk] || 0) + 1; r.naoveio++; } })));
+  days.forEach((k) => {
+    const list = getPlan(k).filter((e) => e.status !== 'cancelado' && e.status !== 'naoveio');
+    const dv = list.filter((e) => e.status === 'veio').length;
+    const dg = list.filter((e) => e.status === 'programado').length;
+    r.days.push({ k, veio: dv, ag: dg, ns: nsByDay[k] || 0, future: k > today });
+    list.forEach((e) => {
+      r.total++;
+      if (e.status === 'veio') {
+        r.veio++;
+        const pl = e.ajuste != null && e.motivo !== 'Atraso do veículo' ? e.ajuste : plannedOp(e);
+        if (e.t?.veio && pl != null) {
+          const dl = msToOp(k, e.t.veio) - pl;
+          if (dl > 10) { r.late++; r.lateSum += dl; } else if (dl < -10) r.early++; else r.onTime++;
+        }
+        if (e.peso) r.peso += e.peso;
+      } else r.aguardando++;
+      const reps = getReps(e).filter((x) => x.qtd);
+      if (reps.length) { r.repN++; reps.forEach((x) => { r.repKg += x.un === 't' ? x.qtd * 1000 : x.qtd; }); } else if (e.semRep) r.semRep++;
+      const nm = matName(e);
+      r.mats.set(nm, (r.mats.get(nm) || 0) + 1);
+      const cl = catLookup(e.material);
+      if (cl.state === 'ok') { const en = embNice(cl.it[3]); r.embs.set(en, (r.embs.get(en) || 0) + 1); }
+      const tn = TYPES[e.tipo]?.n || e.tipo;
+      r.tipos.set(tn, (r.tipos.get(tn) || 0) + 1);
+      if (isImp(e)) r.imps++;
+      if (prepDone(e) === PREP.length) r.prepFull++;
+    });
+  });
+  return r;
+}
+const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
+function topList(map, n = 5) {
+  const arr = [...map.entries()].sort((x, y) => y[1] - x[1]).slice(0, n);
+  const max = arr[0]?.[1] || 1;
+  return arr.length ? arr.map(([k, v]) => `<div class="tl-row"><span class="tl-name">${esc(k)}</span><span class="tl-bar"><i style="width:${(v / max) * 100}%"></i></span><b>${v}</b></div>`).join('') : '<p class="muted small">Sem dados no período.</p>';
+}
+function statsText(r) {
+  const att = r.veio + r.naoveio;
+  return [
+    `*Filling · Números — ${r.label}* (${fmtDM(fromKey(r.ka))} a ${fmtDM(fromKey(r.kb))})`,
+    `Caminhões: ${r.total + r.naoveio} programados · ${r.veio} ${r.veio === 1 ? 'veio' : 'vieram'} · ${r.naoveio} não ${r.naoveio === 1 ? 'veio' : 'vieram'}${att ? ` (${pct(r.veio, att)}% de comparecimento)` : ''}${r.aguardando ? ` · ${r.aguardando} aguardando` : ''}`,
+    r.onTime + r.late + r.early ? `Pontualidade: ${pct(r.onTime + r.early, r.onTime + r.late + r.early)}% no horário${r.late ? ` · ${r.late} atrasados (média +${Math.round(r.lateSum / r.late)} min)` : ''}` : '',
+    r.peso ? `Peso dos que vieram: ${fmt3(r.peso)} kg` : '',
+    `Reprocesso: ${fmt3(r.repKg)} kg em ${r.repN} caminh${r.repN === 1 ? 'ão' : 'ões'}${r.semRep ? ` · ${r.semRep} sem reprocesso` : ''}`,
+    r.imps ? `Imprevistos: ${r.imps}` : '',
+    r.mats.size ? `Mais frequentes: ${[...r.mats.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([k, v]) => `${k} (${v})`).join(', ')}` : '',
+  ].filter(Boolean).join('\n');
+}
+function statsHtml() {
+  const r = computeStats(statsPeriod);
+  const att = r.veio + r.naoveio;
+  const punct = r.onTime + r.late + r.early;
+  const maxDay = Math.max(1, ...r.days.map((d) => d.veio + d.ag + d.ns));
+  return `<section class="card stats-card">
+    <div class="card-head"><div><h2><span class="h-ico">${I.chart}</span>Números</h2><p class="muted">${esc(r.label)} · ${fmtDM(fromKey(r.ka))} a ${fmtDM(fromKey(r.kb))}</p></div>
+      <div class="head-btns"><button class="btn btn-ghost btn-sm" data-stats-copy>${I.copy}Copiar resumo</button><button class="btn btn-ghost btn-sm" data-xls-open="${statsPeriod}">${I.download}Excel</button></div></div>
+    <div class="seg stats-seg">${[['week', 'Esta semana'], ['lastweek', 'Semana passada'], ['month', 'Este mês'], ['lastmonth', 'Mês passado']].map(([k, l]) => `<button type="button" data-stats="${k}" class="${statsPeriod === k ? 'active' : ''}">${l}</button>`).join('')}</div>
+    <div class="kpis">
+      <div class="kpi"><small>Programados</small><b>${r.total + r.naoveio}</b><em>${r.aguardando ? `${r.aguardando} aguardando` : 'no período'}</em></div>
+      <div class="kpi ok"><small>Vieram</small><b>${r.veio}</b><em>${att ? `${pct(r.veio, att)}% de comparecimento` : '—'}</em></div>
+      <div class="kpi bad"><small>Não vieram</small><b>${r.naoveio}</b><em>${att ? `${pct(r.naoveio, att)}% das chegadas esperadas` : '—'}</em></div>
+      <div class="kpi"><small>No horário</small><b>${punct ? `${pct(r.onTime + r.early, punct)}%` : '—'}</b><em>${r.late ? `${r.late} atrasados · média +${Math.round(r.lateSum / r.late)} min` : 'nenhum atraso'}</em></div>
+      <div class="kpi"><small>Reprocesso</small><b>${fmt3(r.repKg)}<span class="u">kg</span></b><em>${r.repN} caminh${r.repN === 1 ? 'ão' : 'ões'}${r.semRep ? ` · ${r.semRep} sem` : ''}</em></div>
+      <div class="kpi"><small>Peso que veio</small><b>${r.peso ? fmt3(r.peso) : '—'}${r.peso ? '<span class="u">kg</span>' : ''}</b><em>${r.imps ? `${r.imps} imprevisto${r.imps === 1 ? '' : 's'}` : 'sem imprevistos'}</em></div>
+    </div>
+    <div class="stats-chart" role="img" aria-label="Caminhões por dia">${r.days.map((d) => {
+      const tot = d.veio + d.ag + d.ns, dd = fromKey(d.k);
+      return `<div class="sc-day ${d.k === todayKey() ? 'today' : ''} ${d.future ? 'future' : ''}" data-goto="agenda" data-day="${d.k}" title="${fmtShort(dd)}: ${d.veio} vieram · ${d.ns} não vieram · ${d.ag} aguardando">
+        <div class="sc-bar" style="height:${(tot / maxDay) * 100}%">${d.ns ? `<i class="ns" style="flex:${d.ns}"></i>` : ''}${d.ag ? `<i class="ag" style="flex:${d.ag}"></i>` : ''}${d.veio ? `<i class="ok" style="flex:${d.veio}"></i>` : ''}</div>
+        <b>${tot || ''}</b><small>${r.days.length > 8 ? dd.getDate() : `${WD[dd.getDay()]} ${dd.getDate()}`}</small></div>`;
+    }).join('')}</div>
+    <div class="sc-legend"><span><i class="ok"></i>Vieram</span><span><i class="ag"></i>Aguardando</span><span><i class="ns"></i>Não vieram</span></div>
+    <div class="tops">
+      <div><h3>Materiais mais frequentes</h3>${topList(r.mats)}</div>
+      <div><h3>Embalagens</h3>${r.embs.size ? topList(r.embs) : '<p class="muted small">Importe a planilha de embalagens para ver aqui.</p>'}</div>
+      <div><h3>Tipos de envase</h3>${topList(r.tipos)}</div>
+    </div>
+  </section>`;
+}
+document.addEventListener('click', async (ev) => {
+  const b = ev.target.closest('[data-stats]');
+  if (b) { statsPeriod = b.dataset.stats; renderHistory(); return; }
+  if (ev.target.closest('[data-stats-copy]')) {
+    try { await navigator.clipboard.writeText(statsText(computeStats(statsPeriod))); toast('Resumo copiado'); } catch (e) { toast('Não foi possível copiar'); }
+  }
+});
+
+/* ================= Exportar para Excel (.xlsx feito aqui mesmo, sem internet) ================= */
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let j = 0; j < 8; j++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8) { let c = 0xffffffff; for (let i = 0; i < u8.length; i++) c = CRC_T[(c ^ u8[i]) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+function zipStore(files) {
+  const enc = new TextEncoder();
+  const now = new Date();
+  const dt = ((now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1)) & 0xffff;
+  const dd = (((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate()) & 0xffff;
+  const parts = [], central = [];
+  let off = 0;
+  files.forEach((f) => {
+    const name = enc.encode(f.name), data = typeof f.data === 'string' ? enc.encode(f.data) : f.data, crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+    lh.setUint16(10, dt, true); lh.setUint16(12, dd, true); lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true);
+    lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+    parts.push(new Uint8Array(lh.buffer), name, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+    ch.setUint16(12, dt, true); ch.setUint16(14, dd, true); ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true);
+    ch.setUint16(28, name.length, true); ch.setUint32(42, off, true);
+    central.push(new Uint8Array(ch.buffer), name);
+    off += 30 + name.length + data.length;
+  });
+  const csize = central.reduce((a, p) => a + p.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, csize, true); end.setUint32(16, off, true);
+  return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+const xesc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '');
+const colName = (i) => { let s = ''; i++; while (i) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
+const excelDate = (k) => { const [y, m, d] = k.split('-').map(Number); return (Date.UTC(y, m - 1, d) - Date.UTC(1899, 11, 30)) / 86400000; };
+// célula: string | number | {v, s} (s = estilo)
+function sheetXml(rows, widths, opts = {}) {
+  const ST = { head: 1, date: 2, dec: 3, int: 4, ok: 5, bad: 6, title: 7, wait: 8 };
+  const xr = rows.map((row, ri) => `<row r="${ri + 1}"${opts.headRow === ri ? ' ht="22" customHeight="1"' : ''}>${row.map((c, ci) => {
+    if (c == null || c === '') return '';
+    const ref = `${colName(ci)}${ri + 1}`;
+    const cell = typeof c === 'object' ? c : { v: c };
+    const s = cell.s ? ` s="${ST[cell.s] ?? 0}"` : (opts.headRow === ri ? ' s="1"' : '');
+    if (typeof cell.v === 'number' && Number.isFinite(cell.v)) return `<c r="${ref}"${s}><v>${cell.v}</v></c>`;
+    return `<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${xesc(cell.v)}</t></is></c>`;
+  }).join('')}</row>`).join('');
+  const lastCol = colName(Math.max(...rows.map((r) => r.length)) - 1);
+  const freeze = opts.headRow != null ? `<sheetViews><sheetView workbookViewId="0"><pane ySplit="${opts.headRow + 1}" topLeftCell="A${opts.headRow + 2}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>` : '<sheetViews><sheetView workbookViewId="0"/></sheetViews>';
+  const cols = widths ? `<cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols>` : '';
+  const af = opts.filter && rows.length > (opts.headRow ?? 0) + 1 ? `<autoFilter ref="A${opts.headRow + 1}:${lastCol}${rows.length}"/>` : '';
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">${freeze}<sheetFormatPr defaultRowHeight="15"/>${cols}<sheetData>${xr}</sheetData>${af}</worksheet>`;
+}
+function buildXlsx(sheets) {
+  const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<numFmts count="2"><numFmt numFmtId="164" formatCode="dd/mm/yyyy"/><numFmt numFmtId="165" formatCode="#,##0.000"/></numFmts>
+<fonts count="4"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><b/><sz val="14"/><color rgb="FF3A1F63"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>
+<fills count="6"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF3A1F63"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9F2E3"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF9D9DE"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF1EDE4"/></patternFill></fill></fills>
+<borders count="2"><border/><border><bottom style="thin"><color rgb="FFD8B45C"/></bottom></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="9">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
+<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<xf numFmtId="1" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<xf numFmtId="0" fontId="3" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
+<xf numFmtId="0" fontId="3" fillId="4" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
+<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+<xf numFmtId="0" fontId="0" fillId="5" borderId="0" xfId="0" applyFill="1"/>
+</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  const files = [
+    { name: '[Content_Types].xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>` },
+    { name: '_rels/.rels', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
+    { name: 'xl/workbook.xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((sh, i) => `<sheet name="${xesc(sh.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets>${sheets.some((sh) => sh.opts?.filter) ? `<definedNames>${sheets.map((sh, i) => (sh.opts?.filter && sh.rows.length > 1 ? `<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">'${xesc(sh.name)}'!$A$${sh.opts.headRow + 1}:$${colName(Math.max(...sh.rows.map((r) => r.length)) - 1)}$${sh.rows.length}</definedName>` : '')).join('')}</definedNames>` : ''}</workbook>` },
+    { name: 'xl/_rels/workbook.xml.rels', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+    { name: 'xl/styles.xml', data: styles },
+    ...sheets.map((sh, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, data: sheetXml(sh.rows, sh.widths, sh.opts) })),
+  ];
+  return zipStore(files);
+}
+function turnoOfTruck(e, p) {
+  const si = slotIdx(e.slot);
+  if (si >= 0) return TURNOS[SLOTS[si].turno].n;
+  if (p == null) return '';
+  const j = SLOTS.reduce((b, s2, i) => (slotOp(s2) <= p ? i : b), 0);
+  return TURNOS[SLOTS[j].turno].n;
+}
+function rangeDays(ka, kb) { const out = []; for (let d = fromKey(ka); keyOf(d) <= kb; d = addDays(d, 1)) out.push(keyOf(d)); return out; }
+function exportRows(ka, kb) {
+  const head = ['Data', 'Dia', 'Turno', 'Janela', 'Previsto', 'Início', 'Término', 'Status', 'Hora que veio', 'Atraso na chegada (min)', 'Cód. material', 'Material', 'Tipo de envase', 'Janelas', 'Embalagem', 'Cód. embalagem', 'Qtd. embalagens', 'Peso (kg)', 'Ordem de processo', 'Lote', 'Ticket', 'Reprocesso (kg)', 'Lote(s) do reprocesso', 'Sem reprocesso', 'Preparo', 'Etapas pendentes', 'Imprevisto', 'Saída da origem', 'Motivo do ajuste', 'Observações', 'Faltou em'];
+  const rows = [head];
+  const stLabel = { programado: 'Aguardando', veio: 'Veio', naoveio: 'Não veio', cancelado: 'Cancelado' };
+  rangeDays(ka, kb).forEach((k) => {
+    const sch = new Map(schedule(k).items.map((x) => [x.e.id, x]));
+    const list = [...getPlan(k)].sort((a, b) => (sch.get(a.id)?.s ?? plannedOp(a) ?? 9999) - (sch.get(b.id)?.s ?? plannedOp(b) ?? 9999));
+    const d = fromKey(k);
+    list.forEach((e) => {
+      const x = sch.get(e.id), p = plannedOp(e);
+      const si = slotIdx(e.slot);
+      const { code } = splitMat(e.material);
+      const cl = catLookup(e.material);
+      const reps = getReps(e).filter((r) => r.qtd || r.lote);
+      const repKg = reps.reduce((a, r) => a + (r.qtd ? (r.un === 't' ? r.qtd * 1000 : r.qtd) : 0), 0);
+      const late = e.t?.veio && p != null ? Math.round(msToOp(k, e.t.veio) - (e.ajuste != null && e.motivo !== 'Atraso do veículo' ? e.ajuste : p)) : null;
+      const pd = prepDone(e);
+      rows.push([
+        { v: excelDate(k), s: 'date' }, WDL[d.getDay()],
+        turnoOfTruck(e, p),
+        si >= 0 ? SLOTS[si].t : isImp(e) ? 'Imprevisto' : '',
+        p != null ? opToHHMM(p) : '', x ? opToHHMM(x.s) : '', x ? opToHHMM(x.en) : '',
+        { v: stLabel[e.status] || e.status, s: e.status === 'veio' ? 'ok' : e.status === 'naoveio' ? 'bad' : e.status === 'programado' ? 'wait' : undefined },
+        e.status === 'veio' && e.t?.veio ? fmtTime(e.t.veio) : '',
+        late != null && e.status === 'veio' ? { v: late, s: 'int' } : '',
+        code || '', matName(e), TYPES[e.tipo]?.n || e.tipo || '', { v: weightOf(e), s: 'dec' },
+        cl.state === 'ok' ? embNice(cl.it[3]) : '', cl.state === 'ok' && cl.it[2] !== 'NA' ? cl.it[2] : '',
+        cl.state === 'ok' && embQty(cl.it, e.peso) ? { v: embQty(cl.it, e.peso), s: 'int' } : '',
+        e.peso ? { v: e.peso, s: 'dec' } : '',
+        e.os || '', e.op || '', e.ticket || '',
+        repKg ? { v: repKg, s: 'dec' } : '', reps.map((r) => r.lote).filter(Boolean).join(', '),
+        !reps.length && e.semRep ? 'Sim' : '',
+        `${pd}/${PREP.length}`, PREP.filter((pp) => !e.prep?.[pp.k]).map((pp) => pp.l).join(', '),
+        isImp(e) ? 'Sim' : '',
+        e.saida ? `${new Date(e.saida).toLocaleDateString('pt-BR')} ${fmtTime(e.saida)}${e.origemN ? ` · ${e.origemN}` : ''}` : '',
+        e.motivo || '', e.obs || '',
+        (e.noshows || []).map((nk) => fmtDM(fromKey(nk))).join(', '),
+      ]);
+    });
+  });
+  return rows;
+}
+function exportWorkbook(ka, kb, label) {
+  const truck = exportRows(ka, kb);
+  const r = computeStatsRange(ka, kb, label);
+  const perDay = [['Data', 'Dia', 'Programados', 'Vieram', 'Não vieram', 'Aguardando', 'Reprocesso (kg)']];
+  rangeDays(ka, kb).forEach((k) => {
+    const list = getPlan(k).filter((e) => e.status !== 'cancelado');
+    if (!list.length && !isOpDay(fromKey(k))) return;
+    const ns = Object.values(S.plan).reduce((a, l) => a + l.reduce((b, e) => b + (e.noshows || []).filter((x) => x === k).length, 0), 0);
+    const rep = list.reduce((a, e) => a + getReps(e).reduce((b, x) => b + (x.qtd ? (x.un === 't' ? x.qtd * 1000 : x.qtd) : 0), 0), 0);
+    perDay.push([{ v: excelDate(k), s: 'date' }, WDL[fromKey(k).getDay()], { v: list.filter((e) => e.status !== 'naoveio').length + ns, s: 'int' }, { v: list.filter((e) => e.status === 'veio').length, s: 'int' }, { v: ns, s: 'int' }, { v: list.filter((e) => e.status === 'programado').length, s: 'int' }, { v: rep, s: 'dec' }]);
+  });
+  const att = r.veio + r.naoveio, punct = r.onTime + r.late + r.early;
+  const resumo = [
+    [{ v: `Filling · ${label}`, s: 'title' }],
+    [`Período: ${fmtDM(fromKey(ka))}/${ka.slice(0, 4)} a ${fmtDM(fromKey(kb))}/${kb.slice(0, 4)}`],
+    [`Gerado em ${new Date().toLocaleString('pt-BR')}`],
+    [],
+    [{ v: 'Indicador', s: 'head' }, { v: 'Valor', s: 'head' }],
+    ['Caminhões programados', { v: r.total + r.naoveio, s: 'int' }],
+    ['Vieram', { v: r.veio, s: 'int' }],
+    ['Não vieram', { v: r.naoveio, s: 'int' }],
+    ['Aguardando', { v: r.aguardando, s: 'int' }],
+    ['Comparecimento (%)', att ? { v: Math.round((r.veio / att) * 100), s: 'int' } : '—'],
+    ['Chegaram no horário (%)', punct ? { v: Math.round(((r.onTime + r.early) / punct) * 100), s: 'int' } : '—'],
+    ['Atrasados', { v: r.late, s: 'int' }],
+    ['Atraso médio (min)', r.late ? { v: Math.round(r.lateSum / r.late), s: 'int' } : '—'],
+    ['Peso dos que vieram (kg)', { v: r.peso, s: 'dec' }],
+    ['Reprocesso total (kg)', { v: r.repKg, s: 'dec' }],
+    ['Caminhões com reprocesso', { v: r.repN, s: 'int' }],
+    ['Sem reprocesso', { v: r.semRep, s: 'int' }],
+    ['Imprevistos', { v: r.imps, s: 'int' }],
+    [],
+    [{ v: 'Material', s: 'head' }, { v: 'Caminhões', s: 'head' }],
+    ...[...r.mats.entries()].sort((a, b) => b[1] - a[1]).map(([k2, v]) => [k2, { v, s: 'int' }]),
+  ];
+  const blob = buildXlsx([
+    { name: 'Caminhões', rows: truck, widths: [11, 9, 8, 9, 9, 8, 9, 12, 11, 12, 12, 30, 16, 8, 30, 14, 10, 14, 15, 12, 12, 14, 18, 10, 8, 30, 10, 22, 22, 30, 14], opts: { headRow: 0, filter: true } },
+    { name: 'Por dia', rows: perDay, widths: [11, 10, 12, 10, 11, 11, 15], opts: { headRow: 0, filter: true } },
+    { name: 'Resumo', rows: resumo, widths: [32, 16] },
+  ]);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `filling-${ka}${kb !== ka ? `-a-${kb}` : ''}.xlsx`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  toast(`Excel gerado · ${truck.length - 1} caminh${truck.length - 1 === 1 ? 'ão' : 'ões'}`);
+  return blob;
+}
+// diálogo
+let xlsSel = 'week';
+function openXls(preset, day) {
+  xlsSel = preset || 'week';
+  const dk = day || (currentTab === 'agenda' ? agDay : todayKey());
+  $('#xlsBody').innerHTML = `
+    <div class="xls-presets">${[['day', `Dia ${fmtDM(fromKey(dk))}`], ['week', 'Esta semana'], ['lastweek', 'Semana passada'], ['month', 'Este mês'], ['lastmonth', 'Mês passado'], ['custom', 'Escolher datas']].map(([k2, l]) => `<button type="button" class="reag-day ${k2 === xlsSel ? 'active' : ''}" data-xls="${k2}"><b>${l}</b></button>`).join('')}</div>
+    <div class="form-grid xls-custom" ${xlsSel === 'custom' ? '' : 'hidden'}><label>De<input type="date" id="xlsFrom" value="${keyOf(addDays(new Date(), -6))}"></label><label>Até<input type="date" id="xlsTo" value="${todayKey()}"></label></div>
+    <p class="muted small xls-info" id="xlsInfo"></p>
+    <ul class="xls-sheets"><li><b>Caminhões</b> — um por linha, com status, horários, atraso, material, embalagem, peso, ordem, lote, ticket, reprocesso e preparo</li><li><b>Por dia</b> — programados, vieram, não vieram e reprocesso</li><li><b>Resumo</b> — os números do período e os materiais mais frequentes</li></ul>
+    <div class="sheet-foot"><span class="spacer"></span><button type="button" class="btn btn-ghost" data-close>Cancelar</button><button type="button" class="btn btn-primary" data-xls-go data-day="${dk}">${I.download}Baixar Excel</button></div>`;
+  updXlsInfo(dk);
+  $('#xlsDlg').showModal();
+}
+function xlsRange(dk) {
+  if (xlsSel === 'day') return [dk, dk, `Dia ${fmtDM(fromKey(dk))}`];
+  if (xlsSel === 'custom') { let a = $('#xlsFrom').value, b = $('#xlsTo').value; if (a > b) [a, b] = [b, a]; return [a, b, 'Período escolhido']; }
+  const [a, b, l] = periodRange(xlsSel); return [keyOf(a), keyOf(b), l];
+}
+function updXlsInfo(dk) {
+  const [a, b] = xlsRange(dk);
+  if (!a || !b) { $('#xlsInfo').textContent = ''; return; }
+  const n = rangeDays(a, b).reduce((acc, k) => acc + getPlan(k).length, 0);
+  $('#xlsInfo').textContent = `${fmtDM(fromKey(a))} a ${fmtDM(fromKey(b))} · ${n} caminh${n === 1 ? 'ão' : 'ões'}`;
+}
+document.addEventListener('click', (ev) => {
+  const p = ev.target.closest('[data-xls]');
+  if (p) {
+    xlsSel = p.dataset.xls;
+    $$('[data-xls]').forEach((b) => b.classList.toggle('active', b === p));
+    $('.xls-custom').hidden = xlsSel !== 'custom';
+    updXlsInfo($('[data-xls-go]').dataset.day);
+    return;
+  }
+  const g = ev.target.closest('[data-xls-go]');
+  if (g) { const [a, b, l] = xlsRange(g.dataset.day); if (!a || !b) return; exportWorkbook(a, b, l); $('#xlsDlg').close(); return; }
+  const o = ev.target.closest('[data-xls-open]');
+  if (o) openXls(o.dataset.xlsOpen || 'week', o.dataset.day || null);
+});
+document.addEventListener('change', (ev) => { if (ev.target.id === 'xlsFrom' || ev.target.id === 'xlsTo') updXlsInfo($('[data-xls-go]').dataset.day); });
+
+/* ================= Contagem para o próximo caminhão (tela Hoje) ================= */
+function renderCountdown() {
+  const box = $('#countdown');
+  if (!box) return;
+  const nt = nextTruckInfo();
+  let html = '';
+  if (nt && nt.nextT) {
+    const x = nt.nextT, e = x.e, d = Math.round(x.s - nt.now);
+    const late = d < 0;
+    const soon = !late && d <= 30;
+    const frac = late ? 1 : Math.max(0.04, Math.min(1, 1 - d / 180));
+    const R = 30, C = 2 * Math.PI * R;
+    html = `<div class="cd ${late ? 'late' : soon ? 'soon' : ''}" data-id="${e.id}">
+      <div class="cd-ring"><svg viewBox="0 0 72 72"><circle cx="36" cy="36" r="${R}" class="bg"/><circle cx="36" cy="36" r="${R}" class="fg" style="stroke-dasharray:${C.toFixed(1)};stroke-dashoffset:${(C * (1 - frac)).toFixed(1)}"/></svg><span>${mono(e)}</span></div>
+      <div class="cd-main">
+        <small>${late ? 'Passou do horário e ainda não foi confirmado' : 'Próximo caminhão'}</small>
+        <div class="cd-big">${late ? `atrasado <b>${untilText(-d)}</b>` : d <= 1 ? '<b>agora</b>' : `em <b>${untilText(d)}</b>`}</div>
+        <div class="cd-sub"><b>${esc(matName(e))}</b> · ${opToHHMM(x.s)}${e.slot ? ` · janela ${esc(SLOTS[slotIdx(e.slot)]?.t || '')}` : isImp(e) ? ' · imprevisto' : ''} · ${esc(TYPES[e.tipo]?.n || '')}</div>
+        ${nt.running ? `<div class="cd-run">${I.truck}Na linha: <b>${esc(matName(nt.running.e))}</b> até ~${opToHHMM(nt.running.en)}</div>` : ''}
+      </div>
+      <div class="cd-act">${actionBtn(e, nt.k, true)}</div>
+    </div>`;
+  } else if (nt && nt.running) {
+    html = `<div class="cd calm"><div class="cd-ring"><span>${mono(nt.running.e)}</span></div><div class="cd-main"><small>Na linha agora</small><div class="cd-big"><b>${esc(matName(nt.running.e))}</b></div><div class="cd-sub">até ~${opToHHMM(nt.running.en)} · nenhum outro aguardando hoje</div></div></div>`;
+  } else {
+    // próximo dia com caminhão
+    let nk = null, first = null;
+    for (let i = 0, d = nextOpDay(new Date()); i < 7; i++, d = nextOpDay(d)) {
+      const it = schedule(keyOf(d)).items.find((y) => y.e.status === 'programado');
+      if (it) { nk = keyOf(d); first = it; break; }
+    }
+    html = first
+      ? `<div class="cd calm"><div class="cd-ring"><span>${mono(first.e)}</span></div><div class="cd-main"><small>Hoje não há mais caminhões aguardando</small><div class="cd-big">próximo <b>${esc(fmtShort(fromKey(nk)))}</b> às <b>${opToHHMM(first.s)}</b></div><div class="cd-sub"><b>${esc(matName(first.e))}</b> · ${esc(TYPES[first.e.tipo]?.n || '')}</div></div></div>`
+      : `<div class="cd calm"><div class="cd-ring"><span>${I.check}</span></div><div class="cd-main"><small>Tudo em ordem</small><div class="cd-big"><b>Nenhum caminhão aguardando</b></div><div class="cd-sub">Cadastre na Agenda quando chegar a programação.</div></div></div>`;
+  }
+  if (box.dataset.html !== html) { box.innerHTML = html; box.dataset.html = html; }
+}
+setInterval(() => { if (currentTab === 'hoje' && !document.hidden) renderCountdown(); }, 15000);
 
 /* ================= Animações de cada ação no caminhão =================
    Cada etapa tem a sua: OP carimba, MSC2N vira o calendário, Rótulos sai
@@ -3077,7 +3596,76 @@ function tipoFromEmb(emb) {
   if (/ibc/.test(n) && /papel/.test(n)) return 'ibc';
   return null;
 }
-const embIcon = (emb) => (/tambor|bombona/.test(norm(emb)) ? I.drum : /ibc/.test(norm(emb)) ? I.ibc : I.package);
+/* ----- desenho da embalagem (o nome continua sempre ao lado) ----- */
+function embKindOf(emb) {
+  const n = norm(emb);
+  if (/tambor|bombona/.test(n)) {
+    const steel = /aco/.test(n);
+    const open = /remov/.test(n);
+    return { k: 'drum', steel, open };
+  }
+  if (/ibc/.test(n)) {
+    if (/papel/.test(n)) return { k: 'box' };
+    if (/madeira/.test(n)) return { k: 'ibc', base: 'wood', tank: '#eef2f4' };
+    if (/bolha/.test(n)) return { k: 'ibc', base: 'steel', tank: '#ffffff', fresh: true };
+    if (/base de aco|plastico/.test(n)) return { k: 'ibc', base: 'dark', tank: '#e9eef2' };
+    return { k: 'ibc', base: 'steel', tank: '#e6ebef' };
+  }
+  if (/^crt$|iso|granel|tanque/.test(n)) return { k: 'tank' };
+  return { k: 'pkg' };
+}
+function embArt(emb) {
+  const t = embKindOf(emb);
+  const W = '<svg class="emb-art" viewBox="0 0 64 64" aria-hidden="true">';
+  if (t.k === 'ibc') {
+    const base = t.base === 'wood' ? '#b07a3e' : t.base === 'dark' ? '#4b5563' : '#8a94a1';
+    const baseD = t.base === 'wood' ? '#7c5427' : t.base === 'dark' ? '#2f3742' : '#5f6873';
+    return `${W}
+      <rect x="9" y="14" width="46" height="35" rx="5" fill="${t.tank}"/>
+      <rect x="9" y="33" width="46" height="16" rx="3" fill="#f3d27a" fill-opacity=".55"/>
+      <path d="M9 22h46M9 31h46M9 40h46M20.5 14v35M32 14v35M43.5 14v35" stroke="#7d8793" stroke-width="2"/>
+      <rect x="9" y="14" width="46" height="35" rx="5" stroke="#6b7480" stroke-width="2.6"/>
+      <rect x="27" y="8" width="10" height="6" rx="1.5" fill="#9aa3ad" stroke="#6b7480" stroke-width="1.4"/>
+      <circle cx="32" cy="45" r="2.6" fill="#3f4752"/>
+      <rect x="6" y="49" width="52" height="6" rx="1.5" fill="${base}"/>
+      <rect x="8" y="55" width="7" height="4" fill="${baseD}"/><rect x="28.5" y="55" width="7" height="4" fill="${baseD}"/><rect x="49" y="55" width="7" height="4" fill="${baseD}"/>
+      ${t.fresh ? '<path d="M50 6l1.6 3.8 3.8 1.6-3.8 1.6L50 16.8l-1.6-3.8-3.8-1.6 3.8-1.6z" fill="#f5c84c"/>' : ''}
+    </svg>`;
+  }
+  if (t.k === 'box') return `${W}
+      <rect x="8" y="16" width="48" height="33" rx="2.5" fill="#c99257" stroke="#8a5d2c" stroke-width="2"/>
+      <path d="M8 16l6-7h36l6 7" fill="#d9a56a" stroke="#8a5d2c" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M32 9v40" stroke="#8a5d2c" stroke-width="2" stroke-opacity=".5"/>
+      <rect x="27" y="16" width="10" height="33" fill="#e8c38f" fill-opacity=".7"/>
+      <path d="M14 26h8M14 31h6" stroke="#6e4720" stroke-width="2" stroke-linecap="round"/>
+      <path d="M44 25l3 4 3-4M47 29v6" stroke="#6e4720" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="6" y="49" width="52" height="6" rx="1.5" fill="#b07a3e"/>
+      <rect x="8" y="55" width="7" height="4" fill="#7c5427"/><rect x="28.5" y="55" width="7" height="4" fill="#7c5427"/><rect x="49" y="55" width="7" height="4" fill="#7c5427"/>
+    </svg>`;
+  if (t.k === 'drum') {
+    const c1 = t.steel ? '#9aa5b1' : '#2f72d8', c2 = t.steel ? '#d7dde3' : '#6fa2ef', c3 = t.steel ? '#5f6a76' : '#1b4d9e';
+    const gid = `dg${t.steel ? 's' : 'p'}`;
+    return `${W}
+      <defs><linearGradient id="${gid}" x1="0" x2="1"><stop offset="0" stop-color="${c3}"/><stop offset=".35" stop-color="${c2}"/><stop offset=".6" stop-color="${c1}"/><stop offset="1" stop-color="${c3}"/></linearGradient></defs>
+      <path d="M14 13v38c0 3 8 5.5 18 5.5S50 54 50 51V13" fill="url(#${gid})"/>
+      <path d="M14 26c0 3 8 5.5 18 5.5S50 29 50 26M14 39c0 3 8 5.5 18 5.5S50 42 50 39" stroke="${c3}" stroke-width="2.6" fill="none"/>
+      <ellipse cx="32" cy="13" rx="18" ry="5.5" fill="${c2}" stroke="${c3}" stroke-width="2"/>
+      ${t.open
+        ? `<ellipse cx="32" cy="13" rx="18" ry="5.5" fill="none" stroke="${t.steel ? '#3f4852' : '#173f80'}" stroke-width="3.2"/><rect x="46" y="10" width="5" height="6" rx="1" fill="${t.steel ? '#3f4852' : '#173f80'}"/>`
+        : `<ellipse cx="24" cy="12.5" rx="3" ry="1.4" fill="${c3}"/><ellipse cx="40" cy="13.5" rx="2.2" ry="1.1" fill="${c3}"/>`}
+    </svg>`;
+  }
+  if (t.k === 'tank') return `${W}
+      <rect x="5" y="16" width="54" height="32" rx="3" stroke="#6b7480" stroke-width="2.4"/>
+      <rect x="10" y="20" width="44" height="24" rx="12" fill="#c7ced6" stroke="#6b7480" stroke-width="2"/>
+      <path d="M22 20v24M42 20v24" stroke="#6b7480" stroke-width="1.6" stroke-opacity=".6"/>
+      <rect x="29" y="14" width="6" height="6" rx="1" fill="#6b7480"/>
+      <path d="M5 16l8 8M59 16l-8 8M5 48l8-8M59 48l-8-8" stroke="#6b7480" stroke-width="1.8"/>
+    </svg>`;
+  return `${W}<path d="M32 8l22 11v26L32 56 10 45V19z" fill="#c99257" stroke="#8a5d2c" stroke-width="2" stroke-linejoin="round"/><path d="M10 19l22 11 22-11M32 30v26" stroke="#8a5d2c" stroke-width="2"/></svg>`;
+}
+
+const embIcon = (emb) => embArt(emb);
 // item da planilha para um material digitado ("50451613 Acronal…" ou só o nome)
 function catLookup(material) {
   const ix = catIndex();
@@ -3807,6 +4395,8 @@ document.addEventListener('keydown', (ev) => {
     '/': () => openSearch(),
     v: () => { S.settings.agView = agView() === 'compact' ? 'full' : 'compact'; expanded.clear(); save(); if (currentTab !== 'agenda') setTab('agenda'); else render(); toast(agView() === 'compact' ? 'Visão resumida' : 'Visão detalhada'); },
     b: () => openSearch(),
+    p: () => openReport(),
+    x: () => openXls(currentTab === 'agenda' ? 'day' : 'week'),
     l: () => (SEC.vault ? secLock() : toast('Ative a proteção em Configurações → Segurança')),
   }[key];
   if (act) { ev.preventDefault(); act(); }
@@ -3826,7 +4416,13 @@ window.addEventListener('unhandledrejection', (ev) => showError(ev.reason));
 /* ================= Início ================= */
 const setTopH = () => document.documentElement.style.setProperty('--top-h', ($('.topbar')?.offsetHeight || 62) + 'px');
 setTopH(); window.addEventListener('resize', setTopH);
-if (document.documentElement.classList.contains('is-splash')) setTimeout(() => document.documentElement.classList.remove('is-splash'), 1700);
+// ícone animado também na tela de bloqueio
+{ const sc = document.querySelector('.splash .anim-crest'); if (sc && $('#lockCrest')) $('#lockCrest').innerHTML = sc.outerHTML.replace(/ax-/g, 'lx-'); }
+if (document.documentElement.classList.contains('is-splash')) {
+  const endSplash = () => document.documentElement.classList.remove('is-splash');
+  setTimeout(endSplash, 1900);
+  document.querySelector('.splash')?.addEventListener('click', endSplash);
+}
 $$('[data-ic]').forEach((el) => { el.innerHTML = I[el.dataset.ic] || ''; });
 fillSelects();
 renderLegend();
