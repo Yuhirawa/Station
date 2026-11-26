@@ -3357,3 +3357,89 @@ html[data-accent='emerald'] { --gold: #4fd39a; --gold-hi: #c8f5df; --gold-lo: #1
 }
 @media (min-width: 721px) and (max-width: 860px) { .top-actions .clock, #clock { display: none; } }
 .tabs .tab-btn .tab-count { position: static; margin-left: 1px; box-shadow: none; }
+@media (max-width: 720px) { .fc-when { padding-right: 56px; } }
+
+/* =========================================================
+   v29 — Brasão nas cores de cada tema e a Aurora na abertura
+   ========================================================= */
+:root {
+  --cr-b1: #2d1656; --cr-b2: #150a28; --cr-b3: #07040d; --cr-gl: #8a5ae0; --cr-top: #2a1748;
+  --cr-g1: #fbe9b0; --cr-g2: #dcb65e; --cr-g3: #a07a2a;
+  --cr-m1: #8a6420; --cr-m2: #e9c873; --cr-m3: #f8e3a4; --cr-m4: #c99a3e; --cr-m5: #7a561a;
+  --cr-l1: #f6d77f; --cr-l2: #c28c2b; --cr-hi: #fbe9b0;
+}
+/* fundo do brasão: a cor principal de cada tema */
+html[data-theme]:not([data-theme='dark']) {
+  --cr-b1: color-mix(in srgb, var(--purple) 46%, #0c0810); --cr-b2: color-mix(in srgb, var(--purple) 18%, #09060c); --cr-b3: #050307;
+  --cr-gl: var(--purple); --cr-top: color-mix(in srgb, var(--purple) 30%, #0b070f);
+}
+/* metal e líquido: a cor de destaque (ouro, prata, rubi, safira…) */
+html:not([data-accent='gold']), html[data-mode='light'] {
+  --cr-g1: color-mix(in srgb, var(--gold-hi) 85%, #fff); --cr-g2: var(--gold); --cr-g3: var(--gold-lo);
+  --cr-m1: color-mix(in srgb, var(--gold-lo) 80%, #000); --cr-m2: var(--gold); --cr-m3: color-mix(in srgb, var(--gold-hi) 80%, #fff); --cr-m4: color-mix(in srgb, var(--gold) 80%, var(--gold-lo)); --cr-m5: color-mix(in srgb, var(--gold-lo) 70%, #000);
+  --cr-l1: var(--gold-hi); --cr-l2: var(--gold); --cr-hi: color-mix(in srgb, var(--gold-hi) 80%, #fff);
+}
+.anim-crest .cs-b1 { stop-color: var(--cr-b1); } .anim-crest .cs-b2 { stop-color: var(--cr-b2); } .anim-crest .cs-b3 { stop-color: var(--cr-b3); }
+.anim-crest .cs-gl { stop-color: var(--cr-gl); }
+.anim-crest .cs-g1 { stop-color: var(--cr-g1); } .anim-crest .cs-g2 { stop-color: var(--cr-g2); } .anim-crest .cs-g3 { stop-color: var(--cr-g3); }
+.anim-crest .cs-m1 { stop-color: var(--cr-m1); } .anim-crest .cs-m2 { stop-color: var(--cr-m2); } .anim-crest .cs-m3 { stop-color: var(--cr-m3); } .anim-crest .cs-m4 { stop-color: var(--cr-m4); } .anim-crest .cs-m5 { stop-color: var(--cr-m5); }
+.anim-crest .cs-l1 { stop-color: var(--cr-l1); } .anim-crest .cs-l2 { stop-color: var(--cr-l2); }
+.anim-crest .cs-top { fill: var(--cr-top); } .anim-crest .cs-hi { fill: var(--cr-hi); }
+/* a Aurora no lugar do brasão nos temas dela */
+.anim-cat { display: none; }
+[data-theme='siames'] .anim-crest, [data-theme='siamesclaro'] .anim-crest { display: none; }
+[data-theme='siames'] .anim-cat, [data-theme='siamesclaro'] .anim-cat { display: block; }
+.anim-cat .ct-b1 { stop-color: #3a2b20; } .anim-cat .ct-b2 { stop-color: #120d0a; }
+[data-theme='siamesclaro'] .anim-cat .ct-b1 { stop-color: #fffaf2; } [data-theme='siamesclaro'] .anim-cat .ct-b2 { stop-color: #e9d6bd; }
+[data-theme='siamesclaro'] .anim-cat .ct-ring { stroke: #6fb0ec; stroke-opacity: .55; }
+[data-theme='siamesclaro'] .anim-cat .ct-spark { fill: #6fb0ec; }
+.splash-crest .anim-cat { width: 132px; height: 132px; border-radius: 30px; box-shadow: 0 0 0 1px var(--line-2), 0 0 70px var(--gold-soft), 0 22px 54px rgba(0,0,0,.45); }
+.lock-crest .anim-cat { width: 82px; height: 82px; border-radius: 21px; box-shadow: 0 0 0 1px var(--line-2), 0 0 50px var(--gold-soft), 0 14px 34px rgba(0,0,0,.35); }
+.anim-cat .ct-eyes { transform-box: fill-box; transform-origin: center; }
+.anim-cat .ct-tail { transform-box: view-box; transform-origin: 322px 436px; }
+.anim-cat .ct-crown { transform-box: fill-box; transform-origin: center bottom; }
+.anim-cat .ct-all { transform-box: view-box; transform-origin: 256px 456px; }
+.anim-cat .ct-spark { transform-box: fill-box; transform-origin: center; }
+/* abertura: ela aparece, a coroinha cai na cabeça, pisca e balança o rabo */
+.splash .anim-cat .ct-all { animation: ctIn .6s cubic-bezier(.2,.9,.3,1.2) both; }
+.splash .anim-cat .ct-crown { animation: ctCrown .55s .55s cubic-bezier(.3,1.4,.5,1) both; }
+.splash .anim-cat .ct-eyes { animation: ctBlink .32s 1.05s ease-in-out both; }
+.splash .anim-cat .ct-tail { animation: ctTail 1.2s .3s ease-in-out both; }
+.splash .anim-cat .ct-spark { animation: ctSpark .7s ease-out both; }
+.splash .anim-cat .ct-spark.s1 { animation-delay: .95s; } .splash .anim-cat .ct-spark.s2 { animation-delay: 1.1s; } .splash .anim-cat .ct-spark.s3 { animation-delay: 1.2s; }
+/* bloqueio: pisca e mexe o rabo de vez em quando */
+.lock-crest .anim-cat .ct-eyes { animation: ctBlinkLoop 4.5s 1s infinite; }
+.lock-crest .anim-cat .ct-tail { animation: ctTailLoop 4.5s 1.6s ease-in-out infinite; }
+@keyframes ctIn { from { transform: translateY(40px) scale(.7); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes ctCrown { 0% { transform: translateY(-120px) rotate(-30deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: none; opacity: 1; } }
+@keyframes ctBlink { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.08); } }
+@keyframes ctBlinkLoop { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.08); } }
+@keyframes ctTail { 0% { transform: rotate(0); } 30% { transform: rotate(-9deg); } 60% { transform: rotate(6deg); } 100% { transform: rotate(0); } }
+@keyframes ctTailLoop { 0%, 60%, 100% { transform: rotate(0); } 70% { transform: rotate(-8deg); } 80% { transform: rotate(5deg); } 90% { transform: rotate(-3deg); } }
+@keyframes ctSpark { 0% { transform: scale(0) rotate(0); opacity: 0; } 50% { transform: scale(1.3) rotate(45deg); opacity: 1; } 100% { transform: scale(1) rotate(90deg); opacity: 1; } }
+/* brasão vivo no topo */
+.brand-crest { display: inline-flex; flex: none; width: 38px; height: 38px; border-radius: 11px; overflow: hidden; box-shadow: 0 0 0 1px var(--line-2), 0 6px 18px rgba(0,0,0,.3); }
+.brand-crest svg, .brand-crest img { width: 100%; height: 100%; display: block; }
+.brand-crest img { box-shadow: none; border-radius: 0; }
+@media (max-width: 720px) { .brand-crest { width: 34px; height: 34px; } }
+@media (prefers-reduced-motion: no-preference) { .brand-crest { animation: crownGlow 5.5s ease-in-out infinite; } }
+
+/* =========================================================
+   v29 — Transição entre as abas
+   ========================================================= */
+.view.tab-in [style*="--si"] { animation: tabPartIn .5s cubic-bezier(.2,.8,.25,1) both; animation-delay: calc(var(--si) * 45ms); }
+.view.tab-in[data-tab-dir='prev'] [style*="--si"] { animation-name: tabPartInPrev; }
+.view.tab-in > .page-top::after { animation: tabLine .6s .1s ease-out both; }
+@keyframes tabPartIn { from { opacity: 0; transform: translate(18px, 10px); } to { opacity: 1; transform: none; } }
+@keyframes tabPartInPrev { from { opacity: 0; transform: translate(-18px, 10px); } to { opacity: 1; transform: none; } }
+@keyframes tabLine { from { transform: scaleX(0); transform-origin: left; } to { transform: scaleX(1); transform-origin: left; } }
+@media (prefers-reduced-motion: reduce) { .view.tab-in [style*="--si"], .view.tab-in > .page-top::after { animation: none !important; } .brand-crest { animation: none; } }
+.anim-cat, .anim-crest { stroke: none; }
+/* nos temas escuros, o fundo do brasão sai das superfícies do próprio tema (carmesim fica vinho, oceano fica azul…) */
+html[data-mode='dark'][data-theme]:not([data-theme='dark']) {
+  --cr-b1: color-mix(in srgb, var(--purple) 16%, color-mix(in srgb, var(--surface-3) 70%, #fff 6%));
+  --cr-b2: var(--surface); --cr-b3: var(--bg);
+  --cr-top: color-mix(in srgb, var(--purple) 14%, var(--surface));
+}
+.brand .brand-crest { display: inline-flex !important; font-size: 0; letter-spacing: 0; }
+.lock-crest .anim-cat { margin: 0 auto; }

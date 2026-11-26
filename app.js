@@ -620,8 +620,26 @@ let lastToday = todayKey();
 const openTrucks = new Set();
 let lastRulerDay = null;
 
+let tabFxTimer;
+function tabFx(tab, prev) {
+  const v = $('#view-' + tab);
+  if (!v || prev === tab || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const dir = prev && TABS.indexOf(tab) < TABS.indexOf(prev) ? 'prev' : 'next';
+  $$('.view.tab-in').forEach((x) => x.classList.remove('tab-in'));
+  // os blocos entram um depois do outro (só os primeiros, para não demorar)
+  const parts = [...v.querySelectorAll(':scope > .page-top, :scope > section, :scope > div > section, :scope > div > .col > section, :scope > div > .col > .card, .hero, .falta-kpis > .fk, .kpis > *, .falta-card, .grid-plan > *')]
+    .filter((el, i, a) => el.offsetParent !== null && !a.some((o) => o !== el && o.contains(el)));
+  parts.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top || a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+  parts.forEach((el, i) => el.style.setProperty('--si', Math.min(i, 9)));
+  v.dataset.tabDir = dir;
+  void v.offsetWidth;
+  v.classList.add('tab-in');
+  clearTimeout(tabFxTimer);
+  tabFxTimer = setTimeout(() => { v.classList.remove('tab-in'); parts.forEach((el) => el.style.removeProperty('--si')); }, 1100);
+}
 function setTab(tab, push = true) {
   if (!TABS.includes(tab)) tab = 'hoje';
+  const prevTab = currentTab;
   currentTab = tab;
   document.body.dataset.tab = tab;
   $$('.view').forEach((v) => (v.hidden = v.id !== 'view-' + tab));
@@ -631,6 +649,7 @@ function setTab(tab, push = true) {
   lastRulerDay = null;
   render();
   window.scrollTo(0, 0);
+  if (push !== false || prevTab !== tab) tabFx(tab, prevTab === tab ? null : prevTab);
 }
 
 let toastTimer;
@@ -650,6 +669,26 @@ const LIGHT_THEMES = ['light', 'sage', 'sakura', 'winter', 'sand', 'lavender', '
 // silhueta de uma siamesa sentada (tema Aurora)
 const CAT_MARK = '<svg viewBox="0 0 24 24"><path class="d" d="M7 9.2V3.4l3.1 2.7h3.8L17 3.4v5.8c0 2.9-2.2 4.6-5 4.6s-5-1.7-5-4.6z"/><path d="M7 9.2V3.4l3.1 2.7h3.8L17 3.4v5.8c0 2.9-2.2 4.6-5 4.6s-5-1.7-5-4.6z"/><path d="M9 13.2C6.8 14.8 6.2 17.8 6.7 21.2h10.6c.5-3.4-.1-6.4-2.3-8"/><path d="M17.3 21.2c2.6.2 3.9-1.6 3-4.1"/><path d="M10.6 11.4l1.4.9 1.4-.9M12 12.3v.9"/><circle class="eye" cx="9.9" cy="9.1" r="1"/><circle class="eye" cx="14.1" cy="9.1" r="1"/><path d="M5.2 10.6l-2.4-.5M5.3 12l-2.3.5M18.8 10.6l2.4-.5M18.7 12l2.3.5"/></svg>';
 const THEME_ACCENT = { knight: 'silver', midnight: 'silver', winter: 'silver', sakura: 'ruby', aurora: 'emerald', lavender: 'amethyst', azulejo: 'sapphire' };
+// ícone da aba do navegador acompanha o tema: copia o brasão do topo com as cores já calculadas
+function updateFavicon() {
+  const holder = $('.brand-crest');
+  if (!holder) return;
+  const svg = [...holder.querySelectorAll('svg')].find((x) => getComputedStyle(x).display !== 'none');
+  if (!svg) return;
+  const clone = svg.cloneNode(true);
+  const src = svg.querySelectorAll('*'), dst = clone.querySelectorAll('*');
+  src.forEach((el, i) => {
+    const cs = getComputedStyle(el);
+    if (el.tagName === 'stop') dst[i].setAttribute('stop-color', cs.stopColor);
+    else if (el.classList.length && /^(cs|ct)-/.test(el.classList[0])) { dst[i].setAttribute('fill', cs.fill); if (cs.stroke && cs.stroke !== 'none') dst[i].setAttribute('stroke', cs.stroke); }
+    dst[i].removeAttribute('class');
+  });
+  clone.removeAttribute('class');
+  clone.setAttribute('width', '64'); clone.setAttribute('height', '64');
+  const url = `data:image/svg+xml,${encodeURIComponent(new XMLSerializer().serializeToString(clone))}`;
+  const link = $('link[rel=icon]');
+  if (link && link.href !== url) { link.href = url; link.type = 'image/svg+xml'; }
+}
 function applyTheme() {
   const st = S.settings;
   let t = st.theme || 'dark';
@@ -662,6 +701,7 @@ function applyTheme() {
   root.dataset.font = st.font || 'M';
   const bg = getComputedStyle(root).getPropertyValue('--bg').trim();
   if (bg) $('meta[name=theme-color]').content = bg;
+  updateFavicon();
   const mark = (sel, attr, val) => $$(sel).forEach((b) => b.classList.toggle('active', b.dataset[attr] === val));
   mark('[data-theme-set]', 'themeSet', st.theme || 'dark');
   mark('[data-accent-set]', 'accentSet', st.accent || 'auto');
@@ -4912,7 +4952,11 @@ window.addEventListener('unhandledrejection', (ev) => showError(ev.reason));
 const setTopH = () => document.documentElement.style.setProperty('--top-h', ($('.topbar')?.offsetHeight || 62) + 'px');
 setTopH(); window.addEventListener('resize', setTopH);
 // ícone animado também na tela de bloqueio
-{ const sc = document.querySelector('.splash .anim-crest'); if (sc && $('#lockCrest')) $('#lockCrest').innerHTML = sc.outerHTML.replace(/ax-/g, 'lx-'); }
+// o brasão (ou a Aurora, nos temas dela) também no topo e na tela de bloqueio, nas cores do tema
+const crestMarkup = (pre) => ['.splash .anim-crest', '.splash .anim-cat'].map((q) => document.querySelector(q)?.outerHTML || '').join('').replace(/ax-/g, pre);
+if ($('#lockCrest')) $('#lockCrest').innerHTML = crestMarkup('lx-');
+if ($('.brand-crest')) $('.brand-crest').innerHTML = crestMarkup('bx-');
+updateFavicon();
 if (document.documentElement.classList.contains('is-splash')) {
   const endSplash = () => document.documentElement.classList.remove('is-splash');
   setTimeout(endSplash, 1900);

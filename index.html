@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=27">
+  <link rel="stylesheet" href="style.css?v=29">
   <script>
     // aplica tema e preferências antes de desenhar (evita "piscar")
     (function () {
@@ -40,11 +40,11 @@
     <div class="splash-crest">
       <svg class="anim-crest" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true">
         <defs>
-          <linearGradient id="ax-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2d1656"/><stop offset=".55" stop-color="#150a28"/><stop offset="1" stop-color="#07040d"/></linearGradient>
-          <radialGradient id="ax-glow" cx=".5" cy=".42" r=".55"><stop offset="0" stop-color="#8a5ae0" stop-opacity=".5"/><stop offset="1" stop-color="#8a5ae0" stop-opacity="0"/></radialGradient>
-          <linearGradient id="ax-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbe9b0"/><stop offset=".5" stop-color="#dcb65e"/><stop offset="1" stop-color="#a07a2a"/></linearGradient>
-          <linearGradient id="ax-metal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8a6420"/><stop offset=".3" stop-color="#e9c873"/><stop offset=".45" stop-color="#f8e3a4"/><stop offset=".75" stop-color="#c99a3e"/><stop offset="1" stop-color="#7a561a"/></linearGradient>
-          <linearGradient id="ax-liq" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6d77f"/><stop offset="1" stop-color="#c28c2b"/></linearGradient>
+          <linearGradient id="ax-bg" x1="0" y1="0" x2="1" y2="1"><stop class="cs-b1" offset="0" stop-color="#2d1656"/><stop class="cs-b2" offset=".55" stop-color="#150a28"/><stop class="cs-b3" offset="1" stop-color="#07040d"/></linearGradient>
+          <radialGradient id="ax-glow" cx=".5" cy=".42" r=".55"><stop class="cs-gl" offset="0" stop-color="#8a5ae0" stop-opacity=".5"/><stop class="cs-gl" offset="1" stop-color="#8a5ae0" stop-opacity="0"/></radialGradient>
+          <linearGradient id="ax-gold" x1="0" y1="0" x2="0" y2="1"><stop class="cs-g1" offset="0" stop-color="#fbe9b0"/><stop class="cs-g2" offset=".5" stop-color="#dcb65e"/><stop class="cs-g3" offset="1" stop-color="#a07a2a"/></linearGradient>
+          <linearGradient id="ax-metal" x1="0" y1="0" x2="1" y2="0"><stop class="cs-m1" offset="0" stop-color="#8a6420"/><stop class="cs-m2" offset=".3" stop-color="#e9c873"/><stop class="cs-m3" offset=".45" stop-color="#f8e3a4"/><stop class="cs-m4" offset=".75" stop-color="#c99a3e"/><stop class="cs-m5" offset="1" stop-color="#7a561a"/></linearGradient>
+          <linearGradient id="ax-liq" x1="0" y1="0" x2="0" y2="1"><stop class="cs-l1" offset="0" stop-color="#f6d77f"/><stop class="cs-l2" offset="1" stop-color="#c28c2b"/></linearGradient>
         </defs>
         <rect width="512" height="512" rx="116" fill="url(#ax-bg)"/>
         <rect width="512" height="512" rx="116" fill="url(#ax-glow)"/>
@@ -54,7 +54,7 @@
           <g class="ac-crown"><path d="M178 150 L166 86 L214 120 L256 70 L298 120 L346 86 L334 150 Z" fill="url(#ax-gold)"/>
           <rect x="176" y="148" width="160" height="20" rx="6" fill="url(#ax-gold)"/>
           <rect x="176" y="148" width="160" height="20" rx="6" fill="none" stroke="#7a5a18" stroke-opacity=".35" stroke-width="2"/>
-          <circle cx="166" cy="84" r="9" fill="#fbe9b0"/><circle cx="256" cy="66" r="10" fill="#fbe9b0"/><circle cx="346" cy="84" r="9" fill="#fbe9b0"/>
+          <circle class="cs-hi" cx="166" cy="84" r="9" fill="#fbe9b0"/><circle class="cs-hi" cx="256" cy="66" r="10" fill="#fbe9b0"/><circle class="cs-hi" cx="346" cy="84" r="9" fill="#fbe9b0"/>
           <circle cx="256" cy="158" r="5" fill="#b03a5b"/><circle cx="216" cy="158" r="4" fill="#3f6fd0"/><circle cx="296" cy="158" r="4" fill="#2f9e6a"/><path class="ac-glint" d="M150 60 L176 60 L136 180 L110 180 Z" fill="#fff" fill-opacity=".55"/></g>
           <!-- bico de envase -->
           <rect x="236" y="176" width="40" height="22" rx="6" fill="url(#ax-gold)"/>
@@ -67,16 +67,68 @@
           <path d="M150 356 A106 24 0 0 0 362 356 M150 400 A106 24 0 0 0 362 400" fill="none" stroke="#5a3f10" stroke-opacity=".55" stroke-width="7"/>
           <path d="M150 356 A106 24 0 0 0 362 356 M150 400 A106 24 0 0 0 362 400" fill="none" stroke="#fff1c4" stroke-opacity=".55" stroke-width="2.5"/>
           <path d="M150 304 V428 A106 24 0 0 0 362 428 V304" fill="none" stroke="#7a5a18" stroke-opacity=".6" stroke-width="3"/>
-          <ellipse cx="256" cy="304" rx="106" ry="24" fill="#2a1748" stroke="url(#ax-gold)" stroke-width="8"/>
+          <ellipse class="cs-top" cx="256" cy="304" rx="106" ry="24" fill="#2a1748" stroke="url(#ax-gold)" stroke-width="8"/>
           <ellipse class="ac-surf" cx="256" cy="307" rx="90" ry="16" fill="url(#ax-liq)"/>
           <ellipse class="ac-rip r1" cx="256" cy="307" rx="34" ry="7" fill="none" stroke="#fff6d6" stroke-opacity=".85" stroke-width="2.5"/>
           <ellipse class="ac-rip r2" cx="256" cy="307" rx="58" ry="11" fill="none" stroke="#fff6d6" stroke-opacity=".4" stroke-width="2"/>
           <path d="M178 330 V420" stroke="#fff6d6" stroke-opacity=".35" stroke-width="8" stroke-linecap="round"/>
           <!-- brilho -->
-          <path d="M394 236 l6 16 16 6 -16 6 -6 16 -6 -16 -16 -6 16 -6 z" fill="#fbe9b0" fill-opacity=".9"/>
-          <path d="M118 254 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4 z" fill="#fbe9b0" fill-opacity=".55"/>
+          <path class="cs-hi" d="M394 236 l6 16 16 6 -16 6 -6 16 -6 -16 -16 -6 16 -6 z" fill="#fbe9b0" fill-opacity=".9"/>
+          <path class="cs-hi" d="M118 254 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4 z" fill="#fbe9b0" fill-opacity=".55"/>
         </g>
       </g>
+      </svg>
+      <svg class="anim-cat" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true">
+        <defs>
+          <linearGradient id="ax-cbg" x1="0" y1="0" x2="1" y2="1"><stop class="ct-b1" offset="0" stop-color="#3a2b20"/><stop class="ct-b2" offset="1" stop-color="#120d0a"/></linearGradient>
+          <radialGradient id="ax-cglow" cx=".5" cy=".38" r=".55"><stop offset="0" stop-color="#a9d4f7" stop-opacity=".32"/><stop offset="1" stop-color="#a9d4f7" stop-opacity="0"/></radialGradient>
+          <linearGradient id="ax-fur" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdf6ea"/><stop offset=".6" stop-color="#f1e2cb"/><stop offset="1" stop-color="#dcc3a1"/></linearGradient>
+          <radialGradient id="ax-mask" cx=".5" cy=".64" r=".52"><stop offset="0" stop-color="#3e2616"/><stop offset=".42" stop-color="#5e3d27" stop-opacity=".95"/><stop offset=".78" stop-color="#a77d5a" stop-opacity=".35"/><stop offset="1" stop-color="#f1e2cb" stop-opacity="0"/></radialGradient>
+          <linearGradient id="ax-pt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b4630"/><stop offset="1" stop-color="#3a2416"/></linearGradient>
+          <linearGradient id="ax-eye" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d6ecff"/><stop offset=".55" stop-color="#8cc3f0"/><stop offset="1" stop-color="#4f8fcb"/></linearGradient>
+          <linearGradient id="ax-cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbe9b0"/><stop offset=".55" stop-color="#dcb65e"/><stop offset="1" stop-color="#a07a2a"/></linearGradient>
+        </defs>
+        <rect width="512" height="512" rx="116" fill="url(#ax-cbg)"/>
+        <rect width="512" height="512" rx="116" fill="url(#ax-cglow)"/>
+        <rect class="ct-ring" x="18" y="18" width="476" height="476" rx="100" fill="none" stroke="#a9d4f7" stroke-opacity=".45" stroke-width="4"/>
+        <g class="ct-all">
+          <!-- rabo -->
+          <path class="ct-tail" d="M322 436 C392 446 432 404 418 350 C410 318 386 304 370 322" fill="none" stroke="url(#ax-pt)" stroke-width="26" stroke-linecap="round"/>
+          <!-- corpo creme -->
+          <path d="M256 226 C194 226 166 298 168 360 C170 424 198 454 256 454 C314 454 342 424 344 360 C346 298 318 226 256 226 Z" fill="url(#ax-fur)"/>
+          <ellipse cx="256" cy="346" rx="44" ry="66" fill="#fffaf2" fill-opacity=".35"/>
+          <!-- patinhas -->
+          <ellipse cx="224" cy="448" rx="26" ry="15" fill="url(#ax-pt)"/><ellipse cx="288" cy="448" rx="26" ry="15" fill="url(#ax-pt)"/>
+          <path d="M216 444 v8 M232 444 v8 M280 444 v8 M296 444 v8" stroke="#24150c" stroke-opacity=".5" stroke-width="2.5" stroke-linecap="round"/>
+          <!-- orelhas -->
+          <path d="M180 156 L190 70 L248 122 Z" fill="url(#ax-pt)"/><path d="M332 156 L322 70 L264 122 Z" fill="url(#ax-pt)"/>
+          <path d="M194 138 L199 94 L232 124 Z" fill="#c9998a" fill-opacity=".55"/><path d="M318 138 L313 94 L280 124 Z" fill="#c9998a" fill-opacity=".55"/>
+          <!-- cabeça com a máscara tostada -->
+          <ellipse cx="256" cy="172" rx="94" ry="82" fill="url(#ax-fur)"/>
+          <ellipse cx="256" cy="176" rx="94" ry="82" fill="url(#ax-mask)"/>
+          <!-- olhos azul-gelo -->
+          <g class="ct-eyes">
+            <path d="M194 164 Q220 140 246 164 Q220 182 194 164 Z" fill="url(#ax-eye)"/>
+            <path d="M266 164 Q292 140 318 164 Q292 182 266 164 Z" fill="url(#ax-eye)"/>
+            <ellipse cx="220" cy="163" rx="4.5" ry="12" fill="#0d1a26"/><ellipse cx="292" cy="163" rx="4.5" ry="12" fill="#0d1a26"/>
+            <circle cx="226" cy="157" r="3.5" fill="#fff"/><circle cx="298" cy="157" r="3.5" fill="#fff"/>
+          </g>
+          <!-- nariz, boca e bigodes -->
+          <path d="M247 194 L265 194 L256 205 Z" fill="#24150c"/>
+          <path d="M256 205 q-8 11 -18 5 M256 205 q8 11 18 5" fill="none" stroke="#24150c" stroke-width="3" stroke-linecap="round"/>
+          <path d="M226 200 L160 190 M226 208 L162 214 M286 200 L352 190 M286 208 L350 214" stroke="#fdf6ea" stroke-opacity=".75" stroke-width="2.5" stroke-linecap="round"/>
+          <!-- coroinha real -->
+          <g class="ct-crown"><g transform="rotate(-14 214 92)">
+            <path d="M188 108 L182 70 L204 86 L222 60 L240 86 L262 70 L256 108 Z" fill="url(#ax-cg)"/>
+            <rect x="186" y="104" width="72" height="11" rx="4" fill="url(#ax-cg)"/>
+            <circle cx="182" cy="68" r="5" fill="#fbe9b0"/><circle cx="222" cy="58" r="5.5" fill="#fbe9b0"/><circle cx="262" cy="68" r="5" fill="#fbe9b0"/>
+            <circle cx="222" cy="110" r="3.5" fill="#6fb0ec"/>
+          </g></g>
+        </g>
+        <!-- brilhos azul-gelo -->
+        <path class="ct-spark s1" d="M404 140 l6 16 16 6 -16 6 -6 16 -6 -16 -16 -6 16 -6 z" fill="#cfe7fb"/>
+        <path class="ct-spark s2" d="M110 236 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4 z" fill="#cfe7fb"/>
+        <path class="ct-spark s3" d="M392 392 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3 z" fill="#cfe7fb"/>
       </svg>
       <strong>Filling</strong>
       <span>Painel Real de Envase</span>
@@ -84,7 +136,7 @@
   </div>
   <header class="topbar">
     <div class="brand">
-      <img src="icon.svg" alt="" width="38" height="38">
+      <span class="brand-crest" aria-hidden="true"><img src="icon.svg" alt="" width="38" height="38"></span>
       <div>
         <strong>Filling</strong>
         <span>Painel Real de Envase</span>
@@ -741,6 +793,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=27"></script>
+  <script src="app.js?v=29"></script>
 </body>
 </html>
