@@ -5,7 +5,7 @@ Checklist diária da sequência Filling, agenda de caminhões por horário e pre
 - **Hoje** — sequência colorida por etapa, próximo passo (inclusive caminhão por caminhão), caminhões do dia com chegada/início/fim.
 - **Agenda** — régua do dia (previsto × real), janelas por turno, **horário imprevisto** fora da lista, reprocesso e OS por caminhão, **Ajustar horário** com motivo e opção de empurrar os seguintes.
 - **Não vieram** — só os caminhões marcados como “Não veio”: trazer para hoje, outro dia, “veio afinal” e o histórico de faltas (eles continuam na agenda também).
-- **Importar e-mail** — cole o e-mail de carregamentos do fornecedor (ou arraste o .eml): o painel lê o produto final e o lote final, soma as horas de viagem e sugere a janela. Nada entra na agenda antes de você conferir a prévia e tocar em **Criar**.
+- **Importar e-mail** — cole o e-mail de carregamentos do fornecedor (ou arraste o .eml): o painel lê os dados da carga — tabela, produto final e lote final —, não a frase do e-mail, soma as horas de viagem e sugere a janela. Nada entra na agenda antes de você conferir a prévia e tocar em **Criar**.
 - **Preparo** — confirme as etapas 1 a 1 por caminhão, ou cada etapa em todos de uma vez.
 - **Percurso** — informe a saída do caminhão (ex.: Guaratinguetá, 12 h) e veja a chegada prevista, todas as janelas possíveis depois dela e os caminhões em trânsito.
 - **Histórico** — conclusão da sequência e atraso médio de chegada.

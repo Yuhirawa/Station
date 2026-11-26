@@ -3316,8 +3316,8 @@ function renderCountdown() {
 setInterval(() => { if (currentTab === 'hoje' && !document.hidden) renderCountdown(); }, 15000);
 
 /* ================= Importar carregamentos do e-mail do fornecedor =================
-   Lê o texto colado ou o arquivo .eml. Cada bloco começa com
-   "Carregando no dia DD/MM/AAAA as HHhMM e envase ...". O produto final
+   Lê o texto colado ou o arquivo .eml pelos dados da carga (tabela +
+   produto final + lote), não pela frase do e-mail. O produto final
    (código que está na planilha) vira o material; o código CRT do
    fornecedor só serve de referência. Saída + horas de viagem = chegada;
    o painel sugere a melhor janela livre depois dela. */
@@ -3358,40 +3358,136 @@ function emlToText(bin) {
   const plain = leaves.find((p) => p.ct === 'text/plain');
   const html = leaves.find((p) => p.ct === 'text/html');
   const a = plain ? mimeDecode(plain) : '';
-  if (/Carregando\s+no\s+dia/i.test(a)) return a;
+  if (looksLikeLoading(a) && parseLoadings(a).some((L) => L.finals.length)) return a;
   return html ? htmlToText(mimeDecode(html)) : a;
 }
 // --- leitura dos carregamentos ---
-const LOAD_RE = /Carregando\s+no\s+dia\s+(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+(?:as|às|a)\s+(\d{1,2})\s*(?:h|:)\s*(\d{2})?[^\n]*?\s+e\s+envase\s+(?:no\s+mesmo\s+dia|no\s+dia\s+(\d{1,2})\/(\d{1,2})\/(\d{2,4}))(?:\s+em\s+([^\s\t\n]+))?/gi;
+// Não depende da frase do e-mail (ela muda): lê os DADOS da carga.
+//  · linha da tabela: data de carregamento, data de entrega, pedido, item, material do fornecedor, texto, …, KG, horário, local, cidade, transportadora
+//  · produto final: "54241249   Acronal BCR 467 1000KG 31HA1   13.000 kg" + "Lote 0030622142"
+// A frase "Carregando no dia … as …" só é usada se a tabela não tiver horário.
 const y4 = (y) => (String(y).length === 2 ? 2000 + Number(y) : Number(y));
 const kgNum = (s) => Number(String(s).replace(/\./g, '').replace(',', '.'));
-function parseLoadings(text) {
-  const T = String(text || '').replace(/\r/g, '').replace(/ /g, ' ');
-  const ms = [...T.matchAll(LOAD_RE)];
+const DATE_TOK = /^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/;
+const TIME_TOK = /^(\d{1,2})\s*[:h]\s*(\d{2})(?:\s*h(?:rs?|oras)?)?$/i;
+const dateKeyOf = (m) => `${y4(m[3])}-${pad(m[2])}-${pad(m[1])}`;
+function mailTokens(T) {
+  const out = [];
+  for (const m of T.matchAll(/[^\n\t]+/g)) {
+    let off = 0;
+    m[0].split(/( {2,}| {2,}| ?\| ?)/).forEach((part) => {
+      const at = m.index + off; off += part.length;
+      const v = part.trim();
+      if (v && !/^( {2,}| {2,}| ?\| ?)$/.test(part)) out.push({ v, at });
+    });
+  }
+  return out;
+}
+function mailFinals(T) {
   const ix = catIndex();
-  return ms.map((m, i) => {
-    const end = Math.min(i + 1 < ms.length ? ms[i + 1].index : T.length, (T.slice(m.index).search(/Atenciosamente|Best Regards|Saludos/i) + 1 || Infinity) + m.index - 1);
-    const B = T.slice(m.index + m[0].length, end);
-    const [d, mo, y, hh, mm] = [m[1], m[2], y4(m[3]), m[4], m[5] || '00'];
-    const loadMs = new Date(y, Number(mo) - 1, Number(d), Number(hh), Number(mm)).getTime();
-    const envKey = m[6] ? `${y4(m[8])}-${pad(m[7])}-${pad(m[6])}` : keyOf(new Date(loadMs));
-    const toks = B.split(/[\n\t]/).map((s) => s.trim()).filter(Boolean);
-    // produto final: "54241249   Acronal BCR 467 1000KG 31HA1   13.000 kg"
-    const finals = [...B.matchAll(/^[ \t]*(\d{8})[ \t]+(.+?)[ \t]+([\d.]+(?:,\d+)?)[ \t]*kg\.?[ \t]*$/gim)].map((f) => ({ code: f[1], desc: f[2].replace(/\s{2,}/g, ' ').trim(), kg: kgNum(f[3]) }));
-    if (!finals.length && ix) toks.forEach((t) => { const c = (/^\d{8}$/.exec(t) || [])[0]; if (c && ix.byMat.has(c) && !finals.some((f) => f.code === c)) finals.push({ code: c, desc: ix.byMat.get(c)[0][1], kg: null }); });
-    const lotes = [...B.matchAll(/Lote\s*:?\s*(\d{5,})/gi)].map((l) => l[1]);
-    const hi = toks.findIndex((t) => /^\d{1,2}:\d{2}$/.test(t));
-    const kgTab = hi > 0 && /^[\d.,]+$/.test(toks[hi - 1]) ? kgNum(toks[hi - 1]) : null;
-    const transp = hi >= 0 && toks[hi + 3] && !/^\d{8}\b/.test(toks[hi + 3]) && !/^Lote/i.test(toks[hi + 3]) ? toks[hi + 3] : '';
-    const ordVnd = toks.find((t) => /^4\d{9}$/.test(t)) || '';
-    const oi = toks.indexOf(ordVnd);
-    const item = oi >= 0 && /^\d{1,5}$/.test(toks[oi + 1] || '') ? toks[oi + 1] : '';
-    const finalCodes = new Set(finals.map((f) => f.code));
-    const si = toks.findIndex((t) => /^\d{8}$/.test(t) && !finalCodes.has(t) && !(ix && ix.byMat.has(t)));
-    const sup = si >= 0 ? { code: toks[si], text: toks[si + 1] && !/^\d+$/.test(toks[si + 1]) ? toks[si + 1] : '' } : null;
-    return { loadMs, envKey, place: m[9] || '', finals: finals.map((f, j) => ({ ...f, kg: f.kg || kgTab, lote: lotes[j] || lotes[0] || '' })), transp, ordVnd, item, sup };
+  const out = [];
+  // linha completa do produto final, terminando em "… kg"
+  for (const f of T.matchAll(/(?:^|\n)[ \t]*(\d{8})[ \t]*(?:[-–:][ \t]*)?(?:\n[ \t]*)?([^\n\t]*?\S)[ \t\n]+([\d.]+(?:,\d+)?)[ \t]*kg\.?[ \t]*(?=\n|\t|$)/gi)) {
+    out.push({ at: f.index + f[0].indexOf(f[1]), code: f[1], desc: f[2].replace(/\s{2,}/g, ' ').trim(), kg: kgNum(f[3]) });
+  }
+  // sem a linha "kg": qualquer código de 8 dígitos que esteja na planilha de embalagens
+  if (ix) mailTokens(T).forEach((t) => {
+    const c = (/^(\d{8})\b/.exec(t.v) || [])[1];
+    if (c && ix.byMat.has(c) && !out.some((f) => f.code === c && Math.abs(f.at - t.at) < 400)) {
+      const rest = t.v.slice(8).trim();
+      out.push({ at: t.at, code: c, desc: rest || ix.byMat.get(c)[0][1], kg: null, cat: true });
+    }
+  });
+  out.sort((a, b) => a.at - b.at);
+  // lote final: o primeiro "Lote …" depois do produto (antes do próximo produto)
+  out.forEach((f, i) => {
+    const end = i + 1 < out.length ? out[i + 1].at : T.length;
+    const seg = T.slice(f.at, Math.min(end, f.at + 600));
+    f.lote = (/Lote[\s:.ºnº°#-]*\n?\s*(\d{5,})/i.exec(seg) || [])[1] || '';
+  });
+  return out;
+}
+function mailRows(T, toks) {
+  const rows = [];
+  for (let i = 0; i < toks.length; i++) {
+    const d1 = DATE_TOK.exec(toks[i].v);
+    if (!d1) continue;
+    const d2 = toks[i + 1] && DATE_TOK.exec(toks[i + 1].v);
+    const look = toks.slice(i + 1, i + 8).map((t) => t.v);
+    if (!d2 && !look.some((v) => TIME_TOK.test(v) || /^4\d{9}$/.test(v) || /^\d{8}$/.test(v))) continue;
+    // a linha vai até a próxima data de carregamento (ou 24 campos)
+    let j = i + (d2 ? 2 : 1);
+    const cells = [];
+    while (j < toks.length && cells.length < 24 && !(DATE_TOK.test(toks[j].v) && cells.length > 3)) cells.push(toks[j++]);
+    const vals = cells.map((c) => c.v);
+    const hi = vals.findIndex((v) => TIME_TOK.test(v));
+    const tm = hi >= 0 ? TIME_TOK.exec(vals[hi]) : null;
+    const kgI = hi > 0 ? hi - 1 : -1;
+    const kg = kgI >= 0 && /^\d{1,3}(?:[.,]?\d{3})*(?:,\d+)?$/.test(vals[kgI]) ? kgNum(vals[kgI]) : null;
+    const ordVnd = vals.find((v) => /^4\d{9}$/.test(v)) || '';
+    const oi = vals.indexOf(ordVnd);
+    const item = oi >= 0 && /^\d{1,5}$/.test(vals[oi + 1] || '') ? vals[oi + 1] : '';
+    const si = vals.findIndex((v) => /^\d{8}$/.test(v));
+    const sup = si >= 0 ? { code: vals[si], text: vals[si + 1] && !/^\d+$/.test(vals[si + 1]) ? vals[si + 1] : '' } : null;
+    const transp = hi >= 0 ? (vals.slice(hi + 1, hi + 4).reverse().find((v) => /[A-Za-zÀ-ú]{3,}/.test(v) && /LOG|TRANSP|EXPRESS|CARGA|LTDA|S\.?A\b|\bAS\b|EIRELI|ME\b/i.test(v)) || vals[hi + 3] || '') : '';
+    const place = hi >= 0 ? [vals[hi + 1], vals[hi + 2]].filter((v) => v && !/^\d+$/.test(v)).join(' · ') : '';
+    const lote = vals.find((v) => /^00\d{8}$/.test(v)) || '';
+    rows.push({ at: toks[i].at, end: cells.length ? cells[cells.length - 1].at : toks[i].at, loadKey: dateKeyOf(d1), envKey: d2 ? dateKeyOf(d2) : null, hh: tm ? Number(tm[1]) : null, mm: tm ? Number(tm[2]) : 0, kg, ordVnd, item, sup, transp: /^\d+$/.test(transp) ? '' : transp, place, lote });
+    i = j - 1;
+  }
+  return rows;
+}
+// frases do tipo "Carregando no dia 26/11/2026 as 06h30 e envase no dia 27/11" (opcionais)
+function mailSentences(T) {
+  const out = [];
+  for (const m of T.matchAll(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?[^\n\d]{0,12}?(?:às|as|a partir das|a partir de|,)?\s*(\d{1,2})\s*(?:h|:)\s*(\d{2})?/gi)) {
+    const y = m[3] ? y4(m[3]) : new Date().getFullYear();
+    const tail = T.slice(m.index, m.index + 160);
+    const env = /envase[^\n]{0,30}?(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/i.exec(tail);
+    out.push({ at: m.index, loadKey: `${y}-${pad(m[2])}-${pad(m[1])}`, hh: Number(m[4]), mm: Number(m[5] || 0),
+      envKey: env ? `${env[3] ? y4(env[3]) : y}-${pad(env[2])}-${pad(env[1])}` : /mesmo\s+dia/i.test(tail.split('\n')[0]) ? `${y}-${pad(m[2])}-${pad(m[1])}` : null });
+  }
+  return out.filter((s) => s.hh < 24 && s.mm < 60);
+}
+function parseLoadings(text) {
+  const T = String(text || '').replace(/\r/g, '').replace(/ /g, ' ').replace(/[​‎‏]/g, '');
+  const toks = mailTokens(T);
+  const finals = mailFinals(T);
+  let rows = mailRows(T, toks);
+  const sents = mailSentences(T);
+  const sentBefore = (at) => [...sents].reverse().find((s) => s.at <= at);
+  // sem tabela: cada frase com data e hora vira uma carga (se tiver produto final perto)
+  if (!rows.length) rows = sents.filter((s) => finals.some((f) => f.at > s.at)).map((s) => ({ ...s, kg: null, ordVnd: '', item: '', sup: null, transp: '', place: '', lote: '', end: s.at }));
+  if (!rows.length) return [];
+  rows.forEach((r) => { r.finals = []; });
+  // cada produto final pertence à última carga antes dele (ou à primeira depois, se vier antes da tabela)
+  const fin = finals.filter((f) => !rows.some((r) => r.sup && r.sup.code === f.code)); // código do fornecedor não é produto final
+  fin.forEach((f) => {
+    // 1º pelo lote (a linha da tabela costuma trazer o mesmo lote), 2º pela carga logo acima
+    const r = (f.lote && rows.find((x) => x.lote === f.lote)) || [...rows].reverse().find((x) => x.at <= f.at) || rows[0];
+    r.finals.push(f);
+  });
+  // tabela com várias cargas e os produtos finais todos embaixo: distribui na ordem
+  if (rows.length > 1 && fin.length === rows.length && rows.some((r) => r.finals.length !== 1)) {
+    rows.forEach((r) => { r.finals = []; });
+    fin.forEach((f, i) => rows[i].finals.push(f));
+  }
+  return rows.map((r) => {
+    let { hh, mm } = r;
+    if (hh == null) { const s = sentBefore(r.at); if (s) { hh = s.hh; mm = s.mm; } }
+    const [y, mo, d] = r.loadKey.split('-').map(Number);
+    const loadMs = new Date(y, mo - 1, d, hh ?? 0, mm || 0).getTime();
+    const s = sentBefore(r.at);
+    const envKey = r.envKey || s?.envKey || r.loadKey;
+    const fs = r.finals.length ? r.finals : [];
+    return {
+      loadMs, noTime: hh == null, envKey, place: r.place,
+      finals: fs.map((f, j) => ({ code: f.code, desc: f.desc, kg: f.kg || (fs.length === 1 ? r.kg : null), lote: f.lote || (j === 0 ? r.lote : '') })),
+      transp: r.transp, ordVnd: r.ordVnd, item: r.item, sup: r.sup, kgRow: r.kg, loteRow: r.lote,
+    };
   });
 }
+const looksLikeLoading = (txt) => /\d{1,2}[./]\d{1,2}[./]\d{2,4}/.test(txt) && /\b\d{8}\b/.test(txt) && /\bkg\b|\blote\b|carreg/i.test(txt);
 // --- prévia ---
 let mailDrafts = [];
 let mailOrg = null;
@@ -3403,16 +3499,21 @@ function buildDrafts(loads) {
   const org = mailOrigin();
   const ix = catIndex();
   const drafts = [];
-  loads.forEach((L) => L.finals.forEach((f) => {
-    const cl = ix ? catLookup(`${f.code} ${f.desc}`) : { state: 'none' };
-    const tipo = cl.state === 'ok' ? (tipoFromEmb(cl.it[3]) || 'padrao') : 'padrao';
-    const dupe = f.lote ? Object.entries(S.plan).flatMap(([k, l]) => l.filter((e) => e.op === f.lote && e.status !== 'cancelado').map((e) => ({ k, e })))[0] : null;
-    drafts.push({ id: uid(), on: !dupe, dupe, L, f, cl, tipo, lote: f.lote, peso: f.kg, os: '', h: org?.h ?? 12, orgId: org?.id, orgN: org?.n || '' });
-  }));
+  loads.forEach((L) => {
+    // sem a linha do produto final: usa o material do fornecedor e deixa desmarcado para você conferir
+    const fs = L.finals.length ? L.finals : [{ code: L.sup?.code || '', desc: L.sup?.text || '', kg: L.kgRow, lote: L.loteRow, noFinal: true }];
+    fs.forEach((f) => {
+      const mat = `${f.code} ${f.desc}`.trim();
+      const cl = ix && mat ? catLookup(mat) : { state: 'none' };
+      const tipo = cl.state === 'ok' ? (tipoFromEmb(cl.it[3]) || 'padrao') : 'padrao';
+      const dupe = f.lote ? Object.entries(S.plan).flatMap(([k, l]) => l.filter((e) => e.op === f.lote && e.status !== 'cancelado').map((e) => ({ k, e })))[0] : null;
+      drafts.push({ id: uid(), on: !dupe && !f.noFinal && !L.noTime, dupe, L, f, mat, cl, tipo, dep: L.loadMs, lote: f.lote, peso: f.kg, os: '', h: org?.h ?? 12, orgId: org?.id, orgN: org?.n || '' });
+    });
+  });
   // escolhe as janelas em sequência, como se os anteriores já estivessem na agenda
   const added = [];
   drafts.forEach((dr) => {
-    dr.arr = dr.L.loadMs + dr.h * 3600e3;
+    dr.arr = dr.dep + dr.h * 3600e3;
     dr.opts = mailOpts(dr);
     const best = bestOpt(dr.opts);
     dr.pick = best ? pickVal(best) : '';
@@ -3446,16 +3547,21 @@ function renderMailPreview(meta = '') {
       return `<div class="mail-card ${dr.on ? '' : 'off'}" data-mi="${i}">
         <label class="mc-check"><input type="checkbox" data-mail-on="${i}" ${dr.on ? 'checked' : ''}><span></span></label>
         <div class="mc-main">
-          <div class="mc-top">${it ? `<span class="mc-art">${embArt(it[3])}</span>` : ''}<div><b>${esc(dr.f.code)} ${esc(it ? it[1] : dr.f.desc)}</b>
+          <div class="mc-top">${it ? `<span class="mc-art">${embArt(it[3])}</span>` : ''}<div><b>${esc(it ? `${splitMat(dr.mat).code || String(it[0]).replace(/\D/g, '')} ${it[1]}` : dr.mat || 'Material não encontrado')}</b>
             <small>${it ? `${esc(embNice(it[3]))}${it[2] !== 'NA' ? ` · ${esc(it[2])}` : ''}` : '<span class="bad">Código não está na planilha de embalagens</span>'}</small></div></div>
+          ${dr.f.noFinal && dr.cl.state !== 'ok' ? `<p class="mc-warn">${I.alert}Não achei a linha do produto final desta carga — veio o código do fornecedor. Confira o material abaixo e marque para criar.</p>` : ''}
+          ${dr.L.noTime ? `<p class="mc-warn">${I.alert}Não achei o horário de saída desta carga. Confira a saída abaixo e marque para criar.</p>` : ''}
           ${dr.dupe ? `<p class="mc-warn">${I.alert}Já está na agenda: ${esc(fmtShort(fromKey(dr.dupe.k)))} · lote ${esc(dr.lote)}. Desmarcado para não duplicar.</p>` : ''}
           <div class="mc-route">
-            <span><small>Sai de ${esc(dr.orgN)}</small><b>${fmtDM(new Date(dr.L.loadMs))} ${fmtTime(dr.L.loadMs)}</b></span>
+            <span><small>Sai de ${esc(dr.orgN)}</small><b>${fmtDM(new Date(dr.dep))} ${fmtTime(dr.dep)}</b></span>
             <i>${I.truck}<em>${fmtNum(dr.h)} h</em></i>
             <span><small>Chega</small><b>${fmtDM(new Date(dr.arr))} ${fmtTime(dr.arr)}</b></span>
             <span class="mc-env"><small>E-mail: envase</small><b>${fmtDM(envD)}</b></span>
           </div>
           <div class="form-grid mc-fields">
+            <label class="span-2">Material (produto final)<input data-mail-mat="${i}" value="${esc(dr.mat)}" list="matList" autocomplete="off"></label>
+            <label>Saída de ${esc(dr.orgN)}<input type="datetime-local" data-mail-dep="${i}" value="${toLocalInput(dr.dep)}"></label>
+            <label>Envase no e-mail<input value="${esc(fmtShort(envD))}" disabled></label>
             <label class="span-2">Janela sugerida
               <select data-mail-pick="${i}">${dr.opts.map((o) => `<option value="${pickVal(o)}" ${pickVal(o) === dr.pick ? 'selected' : ''}>${esc(mailOptLabel(o))}</option>`).join('')}${dr.opts.length ? '' : '<option value="">Sem janela livre nos próximos dias</option>'}</select></label>
             <label>Tipo de envase<select data-mail-tipo="${i}">${Object.entries(TYPES).map(([k, t]) => `<option value="${k}" ${k === dr.tipo ? 'selected' : ''}>${esc(t.n)}</option>`).join('')}</select></label>
@@ -3479,7 +3585,7 @@ function renderMailInput(prefill = '', err = '') {
       ${I.mail}<b>Arraste o arquivo do e-mail (.eml) aqui</b><small>ou toque para escolher · no Outlook: Arquivo → Salvar como</small>
     </label>
     <div class="mail-or"><span>ou cole o texto do e-mail</span></div>
-    <textarea id="mailText" class="rep-text mail-text" rows="9" placeholder="Bom dia! Seguem as janelas de carregamento…&#10;Carregando no dia 26/11/2026 as 06h30 e envase no mesmo dia em Jacareí…">${esc(prefill)}</textarea>
+    <textarea id="mailText" class="rep-text mail-text" rows="9" placeholder="Cole aqui o e-mail inteiro do fornecedor, com a tabela de carregamento e o produto final + lote…">${esc(prefill)}</textarea>
     <div class="form-grid" style="margin-top:12px">
       <label>Origem<select id="mailOrg">${os.map((o) => `<option value="${o.id}" ${o.id === cur?.id ? 'selected' : ''}>${esc(o.n)} (${fmtNum(o.h)} h)</option>`).join('')}</select></label>
       <div class="mail-tip">${I.alert}<span>O painel usa o <b>produto final</b> e o <b>lote final</b>. O código CRT do fornecedor fica só como referência.</span></div>
@@ -3488,6 +3594,7 @@ function renderMailInput(prefill = '', err = '') {
     <div class="sheet-foot"><span class="spacer"></span><button type="button" class="btn btn-ghost" data-close>Cancelar</button><button type="button" class="btn btn-primary" data-mail-read>${I.search}Ler e-mail</button></div>`;
 }
 function openMail(prefill = '') {
+  if ($('#matList') && catIndex()) $('#matList').innerHTML = catDatalist();
   renderMailInput(prefill);
   $('#mailDlg').showModal();
   if (prefill) readMail(prefill);
@@ -3495,8 +3602,7 @@ function openMail(prefill = '') {
 function readMail(text, meta = '') {
   if (!text || !text.trim()) { renderMailInput('', 'Cole o texto do e-mail ou escolha o arquivo .eml.'); return; }
   const loads = parseLoadings(text);
-  if (!loads.length) { renderMailInput(text, 'Não encontrei nenhum "Carregando no dia … as …" nesse texto. Confira se colou o e-mail inteiro.'); return; }
-  if (!loads.some((L) => L.finals.length)) { renderMailInput(text, 'Achei os carregamentos, mas não o produto final (linha com o código, a descrição e os kg).'); return; }
+  if (!loads.length) { renderMailInput(text, 'Não achei nenhuma carga nesse texto (data de carregamento, horário e produto). Confira se colou o e-mail inteiro, com a tabela.'); return; }
   mailDrafts = buildDrafts(loads);
   mailDrafts.text = text;
   renderMailPreview(meta);
@@ -3517,6 +3623,14 @@ function syncDraft(i) {
   if (q('lote')) dr.lote = q('lote').value.trim();
   if (q('peso')) dr.peso = parsePesoKg(q('peso').value);
   if (q('os')) dr.os = q('os').value.trim();
+  if (q('mat')) dr.mat = q('mat').value.trim();
+}
+function refreshDraft(dr, keepPick = true) {
+  const ix = catIndex();
+  dr.cl = ix && dr.mat ? catLookup(dr.mat) : { state: 'none' };
+  dr.arr = dr.dep + dr.h * 3600e3;
+  dr.opts = mailOpts(dr);
+  if (!keepPick || !dr.opts.some((o) => pickVal(o) === dr.pick)) { const b = bestOpt(dr.opts); dr.pick = b ? pickVal(b) : ''; }
 }
 function createFromMail() {
   mailDrafts.forEach((_, i) => syncDraft(i));
@@ -3525,12 +3639,13 @@ function createFromMail() {
   mailDrafts.filter((d) => d.on && d.pick).forEach((dr) => {
     const [k, slot, hh] = dr.pick.split('|');
     const it = dr.cl.state === 'ok' ? dr.cl.it : null;
+    if (!dr.mat) return;
     const obs = [dr.L.ordVnd && `Pedido ${dr.L.ordVnd}${dr.L.item ? `/${dr.L.item}` : ''}`, dr.L.sup && `CRT ${dr.L.sup.code}${dr.L.sup.text ? ` ${dr.L.sup.text}` : ''}`, dr.L.transp].filter(Boolean).join(' · ');
     const e = {
       id: uid(), created: Date.now(), prep: {}, t: {}, ajuste: null, motivo: '', status: 'programado',
-      material: `${dr.f.code} ${it ? it[1] : dr.f.desc}`, tipo: dr.tipo, janelas: 'auto', dur: 'auto', slot, hora: hh === '' ? null : Number(hh),
+      material: it ? `${splitMat(dr.mat).code || String(it[0]).replace(/\D/g, '')} ${it[1]}` : dr.mat, tipo: dr.tipo, janelas: 'auto', dur: 'auto', slot, hora: hh === '' ? null : Number(hh),
       reps: [], semRep: false, os: dr.os, op: dr.lote, ticket: '', peso: dr.peso || null,
-      origemId: dr.orgId, origemN: dr.orgN, saida: dr.L.loadMs, viagemH: dr.h, obs, fonte: 'email',
+      origemId: dr.orgId, origemN: dr.orgN, saida: dr.dep, viagemH: dr.h, obs, fonte: 'email',
     };
     (S.plan[k] ||= []).push(e);
     made.push({ k, e });
@@ -3556,6 +3671,18 @@ document.addEventListener('change', (ev) => {
   if (t.id === 'mailOrg') { mailOrg = t.value; return; }
   if (t.dataset.mailOn != null) { const i = +t.dataset.mailOn; mailDrafts.forEach((_, j) => syncDraft(j)); mailDrafts[i].on = t.checked; renderMailPreview(); return; }
   if (t.dataset.mailPick != null) { const i = +t.dataset.mailPick; mailDrafts.forEach((_, j) => syncDraft(j)); mailDrafts[i].pick = t.value; renderMailPreview(); return; }
+  if (t.dataset.mailMat != null) {
+    const i = +t.dataset.mailMat; mailDrafts.forEach((_, j) => syncDraft(j));
+    const dr = mailDrafts[i]; const was = dr.cl.state === 'ok' ? dr.cl.it[3] : null;
+    refreshDraft(dr);
+    if (dr.cl.state === 'ok' && dr.cl.it[3] !== was) { dr.tipo = tipoFromEmb(dr.cl.it[3]) || dr.tipo; refreshDraft(dr); }
+    renderMailPreview(); return;
+  }
+  if (t.dataset.mailDep != null) {
+    const i = +t.dataset.mailDep; mailDrafts.forEach((_, j) => syncDraft(j));
+    const v = fromLocalInput(t.value); if (!v) return;
+    mailDrafts[i].dep = v; refreshDraft(mailDrafts[i], false); renderMailPreview(); return;
+  }
   if (t.dataset.mailTipo != null) {
     const i = +t.dataset.mailTipo; mailDrafts.forEach((_, j) => syncDraft(j));
     const dr = mailDrafts[i]; dr.tipo = t.value; dr.opts = mailOpts(dr);
@@ -3576,7 +3703,7 @@ document.addEventListener('paste', (ev) => {
   const t = ev.target;
   if (t.closest && t.closest('input, textarea, select, [contenteditable], dialog[open]')) return;
   const txt = ev.clipboardData?.getData('text/plain') || '';
-  if (/Carregando\s+no\s+dia/i.test(txt)) { ev.preventDefault(); openMail(txt); }
+  if (looksLikeLoading(txt) && parseLoadings(txt).length) { ev.preventDefault(); openMail(txt); }
 });
 
 /* ================= Aba "Não vieram": só os caminhões que faltaram ================= */
