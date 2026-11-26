@@ -612,7 +612,7 @@ function setPrep(k, id, stepKey, on) {
 }
 
 /* ================= UI geral ================= */
-const TABS = ['hoje', 'agenda', 'preparo', 'percurso', 'historico', 'materiais'];
+const TABS = ['hoje', 'agenda', 'faltas', 'preparo', 'percurso', 'historico', 'materiais'];
 let currentTab = 'hoje';
 let agDay = currentOpDayKey() || keyOf(nextOpDay(new Date()));
 let prDay = keyOf(nextOpDay(new Date()));
@@ -1008,15 +1008,21 @@ function dayPicker(sel, attr) {
   const cur = currentOpDayKey();
   const days = [];
   let d = cur ? fromKey(cur) : nextOpDay(today);
+  // o dia anterior fica sempre à mostra: é ali que se confirmam os carros da madrugada
+  const prev = prevOpDay(d);
+  const pk = keyOf(prev);
+  days.push(prev);
   for (let i = 0; i < 6; i++) { days.push(d); d = nextOpDay(d); }
-  if (!days.some((x) => keyOf(x) === sel)) days.unshift(fromKey(sel));
+  if (!days.some((x) => keyOf(x) === sel)) { if (sel < pk) days.unshift(fromKey(sel)); else days.push(fromKey(sel)); }
   const nk = keyOf(nextOpDay(today));
   return days.map((x) => {
     const k = keyOf(x);
     const tr = active(getPlan(k));
     const used = layout(getPlan(k)).used;
-    const lbl = k === todayKey() || k === cur ? 'Hoje' : k === nk ? 'Próx.' : WD[x.getDay()];
-    return `<button class="day-chip ${k === sel ? 'active' : ''}" data-${attr}="${k}">
+    const isPrev = k === pk;
+    const lbl = k === todayKey() || k === cur ? 'Hoje' : isPrev ? (keyOf(addDays(fromKey(keyOf(days[1])), -1)) === pk ? 'Ontem' : `${WD[x.getDay()]} · ant.`) : k === nk ? 'Próx.' : WD[x.getDay()];
+    const pend = isPrev ? getPlan(k).filter((e) => e.status === 'programado').length : 0;
+    return `<button class="day-chip ${k === sel ? 'active' : ''} ${isPrev ? 'prev' : ''}" data-${attr}="${k}"${pend ? ` title="${pend} sem confirmar"` : ''}>${pend ? `<span class="dc-pend">${pend}</span>` : ''}
       <small>${lbl}</small><b>${fmtDM(x)}</b><em>${tr.length} cam.</em>
       <span class="dc-cap"><i style="width:${Math.min(100, (used / CAP) * 100)}%"></i></span>
     </button>`;
@@ -1960,6 +1966,8 @@ function render() {
   if (currentTab === 'percurso') renderPercurso();
   if (currentTab === 'historico') renderHistory();
   if (currentTab === 'materiais') renderMateriais();
+  if (currentTab === 'faltas') renderFaltas();
+  faltasBadge();
   renderCatRemind();
   animateCounts();
   checkCelebrate();
@@ -2416,6 +2424,7 @@ document.addEventListener('click', (ev) => {
   let el;
 
   if ((el = c('.tab-btn'))) return setTab(el.dataset.tab);
+  if ((el = c('[data-go-tab]'))) return setTab(el.dataset.goTab);
   if (c('[data-open-search]')) { openSearch(); return; }
   if ((el = c('[data-goto-truck]'))) { ev.preventDefault(); $('#searchDlg').close(); document.activeElement?.blur?.(); focusTruckCard(el.dataset.day, el.dataset.gotoTruck); return; }
   if (c('[data-copy-day]')) { openCopyDay(); return; }
@@ -2757,7 +2766,7 @@ function toggleTheme() {
   else { st.lastLight = cur || 'light'; st.theme = st.lastDark || 'dark'; }
   save(); applyTheme(); toast(`Tema: ${THEME_NAMES[st.theme]}`);
 }
-const THEME_NAMES = { auto: 'Automático', dark: 'Noite Real', light: 'Pergaminho', crimson: 'Carmesim Imperial', knight: 'Cavaleiro Negro', emerald: 'Esmeralda Imperial', ocean: 'Safira Profunda', midnight: 'Céu Lunar', sage: 'Sálvia & Marfim', sakura: 'Sakura', winter: 'Névoa de Inverno', obsidian: 'Ouro Negro', aurora: 'Aurora Boreal', chem: 'Laboratório', sand: 'Areia & Terracota', lavender: 'Lavanda', azulejo: 'Azulejo', siames: 'Aurora (siamesa)', siamesclaro: 'Aurora clara' };
+const THEME_NAMES = { auto: 'Automático', dark: 'Noite Real', light: 'Pergaminho', crimson: 'Carmesim Imperial', knight: 'Cavaleiro Negro', emerald: 'Esmeralda Imperial', ocean: 'Safira Profunda', midnight: 'Céu Lunar', sage: 'Sálvia & Marfim', sakura: 'Sakura', winter: 'Névoa de Inverno', obsidian: 'Ouro Negro', aurora: 'Aurora Boreal', chem: 'Laboratório', sand: 'Areia & Terracota', lavender: 'Lavanda', azulejo: 'Azulejo', siames: 'Aurora (noite)', siamesclaro: 'Aurora (creme)' };
 $('#nameInput').addEventListener('change', (ev) => { S.settings.name = ev.target.value.trim().slice(0, 30); save(); render(); });
 $('#exportBtn').addEventListener('click', async () => {
   const prot = !!SEC.vault;
@@ -3305,6 +3314,364 @@ function renderCountdown() {
   if (box.dataset.html !== html) { box.innerHTML = html; box.dataset.html = html; }
 }
 setInterval(() => { if (currentTab === 'hoje' && !document.hidden) renderCountdown(); }, 15000);
+
+/* ================= Importar carregamentos do e-mail do fornecedor =================
+   Lê o texto colado ou o arquivo .eml. Cada bloco começa com
+   "Carregando no dia DD/MM/AAAA as HHhMM e envase ...". O produto final
+   (código que está na planilha) vira o material; o código CRT do
+   fornecedor só serve de referência. Saída + horas de viagem = chegada;
+   o painel sugere a melhor janela livre depois dela. */
+// --- .eml (MIME) ---
+function mimeHeaders(raw) {
+  const out = {};
+  raw.replace(/\r?\n[ \t]+/g, ' ').split(/\r?\n/).forEach((l) => { const i = l.indexOf(':'); if (i > 0) out[l.slice(0, i).trim().toLowerCase()] = l.slice(i + 1).trim(); });
+  return out;
+}
+const mimeParam = (h, p) => (new RegExp(`${p}\\s*=\\s*"?([^";]+)"?`, 'i').exec(h || '') || [])[1] || '';
+function mimeLeaves(bin) {
+  const sep = bin.search(/\r?\n\r?\n/);
+  const head = mimeHeaders(sep < 0 ? bin : bin.slice(0, sep));
+  const body = sep < 0 ? '' : bin.slice(sep).replace(/^\r?\n\r?\n/, '');
+  const ct = (head['content-type'] || 'text/plain').toLowerCase();
+  if (ct.startsWith('multipart/')) {
+    const b = mimeParam(head['content-type'], 'boundary');
+    if (!b) return [];
+    return body.split(`--${b}`).slice(1).filter((p) => !p.startsWith('--')).flatMap((p) => mimeLeaves(p.replace(/^\r?\n/, '')));
+  }
+  return [{ ct: ct.split(';')[0].trim(), charset: mimeParam(head['content-type'], 'charset') || 'utf-8', enc: (head['content-transfer-encoding'] || '').toLowerCase(), body, subject: head.subject, date: head.date }];
+}
+function mimeDecode(part) {
+  let bin = part.body;
+  if (part.enc === 'base64') { try { bin = atob(bin.replace(/[^A-Za-z0-9+/=]/g, '')); } catch (e) { bin = ''; } }
+  else if (part.enc === 'quoted-printable') bin = bin.replace(/=\r?\n/g, '').replace(/=([0-9A-F]{2})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)));
+  const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0) & 255);
+  try { return new TextDecoder(part.charset || 'utf-8').decode(bytes); } catch (e) { return new TextDecoder('utf-8').decode(bytes); }
+}
+function htmlToText(html) {
+  const t = html.replace(/<(style|script|head)[\s\S]*?<\/\1>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|tr|li|h\d|table)>/gi, '\n').replace(/<\/t[dh]>/gi, '\t').replace(/<[^>]+>/g, '');
+  const d = new DOMParser().parseFromString(`<!doctype html><body>${t.replace(/</g, '&lt;')}`, 'text/html');
+  return d.body.textContent.replace(/ /g, ' ');
+}
+function emlToText(bin) {
+  const leaves = mimeLeaves(bin);
+  const plain = leaves.find((p) => p.ct === 'text/plain');
+  const html = leaves.find((p) => p.ct === 'text/html');
+  const a = plain ? mimeDecode(plain) : '';
+  if (/Carregando\s+no\s+dia/i.test(a)) return a;
+  return html ? htmlToText(mimeDecode(html)) : a;
+}
+// --- leitura dos carregamentos ---
+const LOAD_RE = /Carregando\s+no\s+dia\s+(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+(?:as|às|a)\s+(\d{1,2})\s*(?:h|:)\s*(\d{2})?[^\n]*?\s+e\s+envase\s+(?:no\s+mesmo\s+dia|no\s+dia\s+(\d{1,2})\/(\d{1,2})\/(\d{2,4}))(?:\s+em\s+([^\s\t\n]+))?/gi;
+const y4 = (y) => (String(y).length === 2 ? 2000 + Number(y) : Number(y));
+const kgNum = (s) => Number(String(s).replace(/\./g, '').replace(',', '.'));
+function parseLoadings(text) {
+  const T = String(text || '').replace(/\r/g, '').replace(/ /g, ' ');
+  const ms = [...T.matchAll(LOAD_RE)];
+  const ix = catIndex();
+  return ms.map((m, i) => {
+    const end = Math.min(i + 1 < ms.length ? ms[i + 1].index : T.length, (T.slice(m.index).search(/Atenciosamente|Best Regards|Saludos/i) + 1 || Infinity) + m.index - 1);
+    const B = T.slice(m.index + m[0].length, end);
+    const [d, mo, y, hh, mm] = [m[1], m[2], y4(m[3]), m[4], m[5] || '00'];
+    const loadMs = new Date(y, Number(mo) - 1, Number(d), Number(hh), Number(mm)).getTime();
+    const envKey = m[6] ? `${y4(m[8])}-${pad(m[7])}-${pad(m[6])}` : keyOf(new Date(loadMs));
+    const toks = B.split(/[\n\t]/).map((s) => s.trim()).filter(Boolean);
+    // produto final: "54241249   Acronal BCR 467 1000KG 31HA1   13.000 kg"
+    const finals = [...B.matchAll(/^[ \t]*(\d{8})[ \t]+(.+?)[ \t]+([\d.]+(?:,\d+)?)[ \t]*kg\.?[ \t]*$/gim)].map((f) => ({ code: f[1], desc: f[2].replace(/\s{2,}/g, ' ').trim(), kg: kgNum(f[3]) }));
+    if (!finals.length && ix) toks.forEach((t) => { const c = (/^\d{8}$/.exec(t) || [])[0]; if (c && ix.byMat.has(c) && !finals.some((f) => f.code === c)) finals.push({ code: c, desc: ix.byMat.get(c)[0][1], kg: null }); });
+    const lotes = [...B.matchAll(/Lote\s*:?\s*(\d{5,})/gi)].map((l) => l[1]);
+    const hi = toks.findIndex((t) => /^\d{1,2}:\d{2}$/.test(t));
+    const kgTab = hi > 0 && /^[\d.,]+$/.test(toks[hi - 1]) ? kgNum(toks[hi - 1]) : null;
+    const transp = hi >= 0 && toks[hi + 3] && !/^\d{8}\b/.test(toks[hi + 3]) && !/^Lote/i.test(toks[hi + 3]) ? toks[hi + 3] : '';
+    const ordVnd = toks.find((t) => /^4\d{9}$/.test(t)) || '';
+    const oi = toks.indexOf(ordVnd);
+    const item = oi >= 0 && /^\d{1,5}$/.test(toks[oi + 1] || '') ? toks[oi + 1] : '';
+    const finalCodes = new Set(finals.map((f) => f.code));
+    const si = toks.findIndex((t) => /^\d{8}$/.test(t) && !finalCodes.has(t) && !(ix && ix.byMat.has(t)));
+    const sup = si >= 0 ? { code: toks[si], text: toks[si + 1] && !/^\d+$/.test(toks[si + 1]) ? toks[si + 1] : '' } : null;
+    return { loadMs, envKey, place: m[9] || '', finals: finals.map((f, j) => ({ ...f, kg: f.kg || kgTab, lote: lotes[j] || lotes[0] || '' })), transp, ordVnd, item, sup };
+  });
+}
+// --- prévia ---
+let mailDrafts = [];
+let mailOrg = null;
+function mailOrigin() {
+  const os = origins();
+  return os.find((o) => o.id === mailOrg) || os.find((o) => /guaratinguet/i.test(norm(o.n))) || os[0];
+}
+function buildDrafts(loads) {
+  const org = mailOrigin();
+  const ix = catIndex();
+  const drafts = [];
+  loads.forEach((L) => L.finals.forEach((f) => {
+    const cl = ix ? catLookup(`${f.code} ${f.desc}`) : { state: 'none' };
+    const tipo = cl.state === 'ok' ? (tipoFromEmb(cl.it[3]) || 'padrao') : 'padrao';
+    const dupe = f.lote ? Object.entries(S.plan).flatMap(([k, l]) => l.filter((e) => e.op === f.lote && e.status !== 'cancelado').map((e) => ({ k, e })))[0] : null;
+    drafts.push({ id: uid(), on: !dupe, dupe, L, f, cl, tipo, lote: f.lote, peso: f.kg, os: '', h: org?.h ?? 12, orgId: org?.id, orgN: org?.n || '' });
+  }));
+  // escolhe as janelas em sequência, como se os anteriores já estivessem na agenda
+  const added = [];
+  drafts.forEach((dr) => {
+    dr.arr = dr.L.loadMs + dr.h * 3600e3;
+    dr.opts = mailOpts(dr);
+    const best = bestOpt(dr.opts);
+    dr.pick = best ? pickVal(best) : '';
+    if (best && dr.on) { const [, sl, h] = dr.pick.split('|'); const tmp = { id: `__tmp${added.length}`, material: 'x', tipo: dr.tipo, slot: sl, hora: h === '' ? null : Number(h), status: 'programado', janelas: 'auto', dur: 'auto', prep: {}, t: {} }; (S.plan[best.k] ||= []).push(tmp); added.push([best.k, tmp.id]); }
+  });
+  added.forEach(([k, id]) => { S.plan[k] = S.plan[k].filter((e) => e.id !== id); if (!S.plan[k].length) delete S.plan[k]; });
+  return drafts;
+}
+const pickVal = (o) => `${o.k}|${o.shifted || o.imp ? '' : o.s.id}|${o.shifted || o.imp ? o.t : ''}`;
+function mailOpts(dr) {
+  const opts = windowsAfter(dr.arr, 0, dr.tipo, 8);
+  const k = opDayOfMs(dr.arr);
+  if (k) { const t = Math.round(msToOp(k, ceil5(dr.arr))); if (!opts.some((o) => o.k === k && Math.abs(o.t - t) < 5)) opts.push({ k, t, at: opStartMs(k) + t * 60000, imp: true, fits: true, wait: 0 }); }
+  return opts.sort((a, b) => a.at - b.at);
+}
+const bestOpt = (opts) => opts.find((o) => o.fits && !o.imp) || opts.find((o) => o.fits) || opts[0];
+const mailOptLabel = function (o) {
+  const d = new Date(o.at);
+  const w = Math.round(o.wait);
+  return `${WD[d.getDay()]} ${fmtDM(d)} · ${opToHHMM(o.t)}${o.imp ? ' · fora da lista (na chegada)' : o.shifted ? ` · janela ${o.s.t} reajustada` : ''}${o.fits ? '' : ' · apertado'}${o.imp ? '' : ` · ${w < 1 ? 'sem espera' : `espera ${untilText(w)}`}`}`;
+};
+function renderMailPreview(meta = '') {
+  const n = mailDrafts.filter((d) => d.on).length;
+  $('#mailBody').innerHTML = `
+    <div class="mail-sum">${I.mail}<div><b>${mailDrafts.length} carregamento${mailDrafts.length === 1 ? '' : 's'} encontrado${mailDrafts.length === 1 ? '' : 's'}</b><small>${esc(meta)}Saída de ${esc(mailOrigin()?.n || '')} + ${fmtNum(mailDrafts[0]?.h ?? 12)} h de viagem</small></div></div>
+    ${mailDrafts.map((dr, i) => {
+      const it = dr.cl.state === 'ok' ? dr.cl.it : null;
+      const envD = fromKey(dr.L.envKey);
+      const pick = dr.opts.find((o) => pickVal(o) === dr.pick);
+      const differs = pick && keyOf(new Date(pick.at)) !== dr.L.envKey;
+      return `<div class="mail-card ${dr.on ? '' : 'off'}" data-mi="${i}">
+        <label class="mc-check"><input type="checkbox" data-mail-on="${i}" ${dr.on ? 'checked' : ''}><span></span></label>
+        <div class="mc-main">
+          <div class="mc-top">${it ? `<span class="mc-art">${embArt(it[3])}</span>` : ''}<div><b>${esc(dr.f.code)} ${esc(it ? it[1] : dr.f.desc)}</b>
+            <small>${it ? `${esc(embNice(it[3]))}${it[2] !== 'NA' ? ` · ${esc(it[2])}` : ''}` : '<span class="bad">Código não está na planilha de embalagens</span>'}</small></div></div>
+          ${dr.dupe ? `<p class="mc-warn">${I.alert}Já está na agenda: ${esc(fmtShort(fromKey(dr.dupe.k)))} · lote ${esc(dr.lote)}. Desmarcado para não duplicar.</p>` : ''}
+          <div class="mc-route">
+            <span><small>Sai de ${esc(dr.orgN)}</small><b>${fmtDM(new Date(dr.L.loadMs))} ${fmtTime(dr.L.loadMs)}</b></span>
+            <i>${I.truck}<em>${fmtNum(dr.h)} h</em></i>
+            <span><small>Chega</small><b>${fmtDM(new Date(dr.arr))} ${fmtTime(dr.arr)}</b></span>
+            <span class="mc-env"><small>E-mail: envase</small><b>${fmtDM(envD)}</b></span>
+          </div>
+          <div class="form-grid mc-fields">
+            <label class="span-2">Janela sugerida
+              <select data-mail-pick="${i}">${dr.opts.map((o) => `<option value="${pickVal(o)}" ${pickVal(o) === dr.pick ? 'selected' : ''}>${esc(mailOptLabel(o))}</option>`).join('')}${dr.opts.length ? '' : '<option value="">Sem janela livre nos próximos dias</option>'}</select></label>
+            <label>Tipo de envase<select data-mail-tipo="${i}">${Object.entries(TYPES).map(([k, t]) => `<option value="${k}" ${k === dr.tipo ? 'selected' : ''}>${esc(t.n)}</option>`).join('')}</select></label>
+            <label>Lote<input data-mail-lote="${i}" value="${esc(dr.lote)}" inputmode="numeric"></label>
+            <label>Peso (t)<input data-mail-peso="${i}" value="${dr.peso ? (dr.peso / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 3 }) : ''}" inputmode="decimal"></label>
+            <label>Ordem de processo<input data-mail-os="${i}" value="${esc(dr.os)}" placeholder="opcional" inputmode="numeric"></label>
+          </div>
+          ${differs ? `<p class="mc-note">${I.clock}A janela escolhida fica em ${esc(fmtShort(new Date(pick.at)))}; o e-mail fala em envase ${esc(fmtShort(envD))}.</p>` : ''}
+          <p class="mc-ref">${[dr.L.ordVnd && `Pedido ${dr.L.ordVnd}${dr.L.item ? `/${dr.L.item}` : ''}`, dr.L.sup && `CRT ${dr.L.sup.code}${dr.L.sup.text ? ` ${dr.L.sup.text}` : ''}`, dr.L.transp].filter(Boolean).map(esc).join(' · ')}</p>
+        </div>
+      </div>`;
+    }).join('')}
+    <div class="sheet-foot"><button type="button" class="btn btn-ghost" data-mail-back>${I.back}Voltar</button><span class="spacer"></span><button type="button" class="btn btn-primary" data-mail-go ${n ? '' : 'disabled'}>${I.plus}Criar ${n} caminh${n === 1 ? 'ão' : 'ões'}</button></div>`;
+}
+function renderMailInput(prefill = '', err = '') {
+  const os = origins();
+  const cur = mailOrigin();
+  $('#mailBody').innerHTML = `
+    <label class="mail-drop" id="mailDrop">
+      <input type="file" id="mailFile" accept=".eml,.txt,message/rfc822,text/plain" hidden>
+      ${I.mail}<b>Arraste o arquivo do e-mail (.eml) aqui</b><small>ou toque para escolher · no Outlook: Arquivo → Salvar como</small>
+    </label>
+    <div class="mail-or"><span>ou cole o texto do e-mail</span></div>
+    <textarea id="mailText" class="rep-text mail-text" rows="9" placeholder="Bom dia! Seguem as janelas de carregamento…&#10;Carregando no dia 26/11/2026 as 06h30 e envase no mesmo dia em Jacareí…">${esc(prefill)}</textarea>
+    <div class="form-grid" style="margin-top:12px">
+      <label>Origem<select id="mailOrg">${os.map((o) => `<option value="${o.id}" ${o.id === cur?.id ? 'selected' : ''}>${esc(o.n)} (${fmtNum(o.h)} h)</option>`).join('')}</select></label>
+      <div class="mail-tip">${I.alert}<span>O painel usa o <b>produto final</b> e o <b>lote final</b>. O código CRT do fornecedor fica só como referência.</span></div>
+    </div>
+    ${err ? `<p class="mc-warn">${I.alert}${esc(err)}</p>` : ''}
+    <div class="sheet-foot"><span class="spacer"></span><button type="button" class="btn btn-ghost" data-close>Cancelar</button><button type="button" class="btn btn-primary" data-mail-read>${I.search}Ler e-mail</button></div>`;
+}
+function openMail(prefill = '') {
+  renderMailInput(prefill);
+  $('#mailDlg').showModal();
+  if (prefill) readMail(prefill);
+}
+function readMail(text, meta = '') {
+  if (!text || !text.trim()) { renderMailInput('', 'Cole o texto do e-mail ou escolha o arquivo .eml.'); return; }
+  const loads = parseLoadings(text);
+  if (!loads.length) { renderMailInput(text, 'Não encontrei nenhum "Carregando no dia … as …" nesse texto. Confira se colou o e-mail inteiro.'); return; }
+  if (!loads.some((L) => L.finals.length)) { renderMailInput(text, 'Achei os carregamentos, mas não o produto final (linha com o código, a descrição e os kg).'); return; }
+  mailDrafts = buildDrafts(loads);
+  mailDrafts.text = text;
+  renderMailPreview(meta);
+}
+async function readMailFile(file) {
+  if (!file) return;
+  const buf = await file.arrayBuffer();
+  const bin = Array.from(new Uint8Array(buf), (b) => String.fromCharCode(b)).join('');
+  const isEml = /\.eml$/i.test(file.name) || /^(Received|From|Return-Path|MIME-Version|Date|Subject|To):/im.test(bin.slice(0, 3000));
+  const text = isEml ? emlToText(bin) : new TextDecoder('utf-8').decode(buf);
+  let meta = '';
+  if (isEml) { const h = mimeHeaders(bin.slice(0, bin.search(/\r?\n\r?\n/))); const dt = h.date ? new Date(h.date) : null; if (dt && !isNaN(dt)) meta = `E-mail de ${fmtDM(dt)} ${fmtTime(dt.getTime())} · `; }
+  readMail(text, meta);
+}
+function syncDraft(i) {
+  const dr = mailDrafts[i];
+  const q = (s) => $(`[data-mail-${s}="${i}"]`);
+  if (q('lote')) dr.lote = q('lote').value.trim();
+  if (q('peso')) dr.peso = parsePesoKg(q('peso').value);
+  if (q('os')) dr.os = q('os').value.trim();
+}
+function createFromMail() {
+  mailDrafts.forEach((_, i) => syncDraft(i));
+  const before = JSON.parse(JSON.stringify(S.plan));
+  const made = [];
+  mailDrafts.filter((d) => d.on && d.pick).forEach((dr) => {
+    const [k, slot, hh] = dr.pick.split('|');
+    const it = dr.cl.state === 'ok' ? dr.cl.it : null;
+    const obs = [dr.L.ordVnd && `Pedido ${dr.L.ordVnd}${dr.L.item ? `/${dr.L.item}` : ''}`, dr.L.sup && `CRT ${dr.L.sup.code}${dr.L.sup.text ? ` ${dr.L.sup.text}` : ''}`, dr.L.transp].filter(Boolean).join(' · ');
+    const e = {
+      id: uid(), created: Date.now(), prep: {}, t: {}, ajuste: null, motivo: '', status: 'programado',
+      material: `${dr.f.code} ${it ? it[1] : dr.f.desc}`, tipo: dr.tipo, janelas: 'auto', dur: 'auto', slot, hora: hh === '' ? null : Number(hh),
+      reps: [], semRep: false, os: dr.os, op: dr.lote, ticket: '', peso: dr.peso || null,
+      origemId: dr.orgId, origemN: dr.orgN, saida: dr.L.loadMs, viagemH: dr.h, obs, fonte: 'email',
+    };
+    (S.plan[k] ||= []).push(e);
+    made.push({ k, e });
+  });
+  if (!made.length) return;
+  save();
+  $('#mailDlg').close();
+  focusTruckCard(made[0].k, made[0].e.id);
+  const undo = () => { S.plan = before; save(); render(); };
+  lastUndo = undo;
+  toast(`${made.length} caminh${made.length === 1 ? 'ão criado' : 'ões criados'} pelo e-mail`, 'Desfazer', undo);
+}
+document.addEventListener('click', (ev) => {
+  const t = ev.target;
+  if (t.closest('[data-mail-open]')) { openMail(); return; }
+  if (t.closest('[data-mail-read]')) { mailOrg = $('#mailOrg')?.value || mailOrg; readMail($('#mailText').value); return; }
+  if (t.closest('[data-mail-back]')) { renderMailInput(mailDrafts.text || ''); return; }
+  if (t.closest('[data-mail-go]')) { createFromMail(); return; }
+});
+document.addEventListener('change', (ev) => {
+  const t = ev.target;
+  if (t.id === 'mailFile') { readMailFile(t.files[0]); t.value = ''; return; }
+  if (t.id === 'mailOrg') { mailOrg = t.value; return; }
+  if (t.dataset.mailOn != null) { const i = +t.dataset.mailOn; mailDrafts.forEach((_, j) => syncDraft(j)); mailDrafts[i].on = t.checked; renderMailPreview(); return; }
+  if (t.dataset.mailPick != null) { const i = +t.dataset.mailPick; mailDrafts.forEach((_, j) => syncDraft(j)); mailDrafts[i].pick = t.value; renderMailPreview(); return; }
+  if (t.dataset.mailTipo != null) {
+    const i = +t.dataset.mailTipo; mailDrafts.forEach((_, j) => syncDraft(j));
+    const dr = mailDrafts[i]; dr.tipo = t.value; dr.opts = mailOpts(dr);
+    if (!dr.opts.some((o) => pickVal(o) === dr.pick)) { const b = bestOpt(dr.opts); dr.pick = b ? pickVal(b) : ''; }
+    renderMailPreview();
+  }
+});
+// arrastar o .eml para a janela
+document.addEventListener('dragover', (ev) => { if ($('#mailDlg')?.open && ev.dataTransfer?.types?.includes('Files')) { ev.preventDefault(); $('#mailDrop')?.classList.add('over'); } });
+document.addEventListener('dragleave', (ev) => { if (ev.target.id === 'mailDrop') ev.target.classList.remove('over'); });
+document.addEventListener('drop', (ev) => {
+  if (!$('#mailDlg')?.open) return;
+  const f = ev.dataTransfer?.files?.[0];
+  if (f) { ev.preventDefault(); readMailFile(f); }
+});
+// colar o e-mail em qualquer lugar do painel já abre a importação
+document.addEventListener('paste', (ev) => {
+  const t = ev.target;
+  if (t.closest && t.closest('input, textarea, select, [contenteditable], dialog[open]')) return;
+  const txt = ev.clipboardData?.getData('text/plain') || '';
+  if (/Carregando\s+no\s+dia/i.test(txt)) { ev.preventDefault(); openMail(txt); }
+});
+
+/* ================= Aba "Não vieram": só os caminhões que faltaram ================= */
+let faltasView = 'pend';
+const truckHour = (e) => { const i = slotIdx(e.slot); return i >= 0 ? SLOTS[i].t : e.hora != null ? opToHHMM(e.hora) : '—'; };
+function faltasData() {
+  const pend = [], hist = [];
+  Object.entries(S.plan).forEach(([k, list]) => list.forEach((e) => {
+    if (e.status === 'naoveio') pend.push({ k, e });
+    (e.noshows || []).forEach((nk) => hist.push({ nk, k, e }));
+  }));
+  pend.sort((a, b) => (a.k < b.k ? 1 : a.k > b.k ? -1 : truckHour(a.e) < truckHour(b.e) ? -1 : 1));
+  hist.sort((a, b) => (a.nk < b.nk ? 1 : -1));
+  return { pend, hist };
+}
+function faltasBadge() {
+  const n = Object.values(S.plan).reduce((a, l) => a + l.filter((e) => e.status === 'naoveio').length, 0);
+  $$('.tab-btn[data-tab=faltas]').forEach((b) => {
+    let c = b.querySelector('.tab-count');
+    if (!n) { c?.remove(); return; }
+    if (!c) { c = document.createElement('span'); c.className = 'tab-count'; b.appendChild(c); }
+    c.textContent = n;
+  });
+}
+function faltaCard({ k, e }, to) {
+  const cl = catLookup(e.material);
+  const it = cl.state === 'ok' ? cl.it : null;
+  const vezes = (e.noshows || []).length;
+  return `<article class="falta-card" data-id="${e.id}">
+    <div class="fc-art">${it ? embArt(it[3]) : mono(e)}</div>
+    <div class="fc-main">
+      <div class="fc-head"><b>${esc(matName(e))}</b>${vezes > 1 ? `<span class="fc-times">faltou ${vezes}×</span>` : ''}</div>
+      <div class="fc-when">${I.x}<span>Não veio <b>${esc(fmtShort(fromKey(k)))}</b> · janela ${esc(truckHour(e))} (${esc(slotLabel(e))})${e.t?.naoveio ? ` · marcado às ${fmtTime(e.t.naoveio)}` : ''}</span></div>
+      <div class="ichips">${infoChips(e, k)}</div>
+      ${e.obs ? `<p class="fc-obs">${esc(e.obs)}</p>` : ''}
+      <div class="fc-act">
+        <button type="button" class="btn btn-primary btn-sm" data-bring="${e.id}" data-from="${k}" data-to="${to}">${I.plus}Trazer para ${esc(fmtShort(fromKey(to)))}</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-reag="${e.id}" data-day="${k}">${I.calClock}Outro dia</button>
+        <button type="button" class="btn btn-veio btn-sm" data-veio="${e.id}" data-day="${k}">${I.check}Veio afinal</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-ghost btn-sm" data-goto-truck="${e.id}" data-day="${k}">${I.clock}Ver na agenda</button>
+      </div>
+    </div>
+  </article>`;
+}
+function renderFaltas() {
+  const box = $('#faltasOut');
+  if (!box) return;
+  const { pend, hist } = faltasData();
+  const to = currentOpDayKey() || keyOf(nextOpDay(new Date()));
+  const mk = todayKey().slice(0, 7);
+  const mes = hist.filter((h) => h.nk.startsWith(mk)).length;
+  const reag = hist.filter((h) => h.e.status !== 'naoveio' && h.e.status !== 'cancelado').length;
+  const cnt = {};
+  hist.forEach((h) => { const n = matName(h.e); cnt[n] = (cnt[n] || 0) + 1; });
+  const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
+  const kpi = (ico, v, l, cls = '') => `<div class="fk ${cls}"><span class="fk-ico">${ico}</span><div><b>${v}</b><small>${l}</small></div></div>`;
+  let body;
+  if (faltasView === 'pend') {
+    if (!pend.length) body = `<section class="card falta-empty"><span class="fe-ico">${I.check}</span><h3>Nenhum caminhão faltando</h3><p class="muted">Quando você marcar <b>Não veio</b> na agenda, o caminhão aparece aqui para reagendar.</p></section>`;
+    else {
+      let last = '';
+      body = pend.map((x) => {
+        const head = x.k !== last ? `<div class="falta-day">${I.calCheck}${esc(fmtLong(fromKey(x.k)))}</div>` : '';
+        last = x.k;
+        return head + faltaCard(x, to);
+      }).join('');
+    }
+  } else if (!hist.length) body = `<section class="card falta-empty"><span class="fe-ico">${I.chart}</span><h3>Sem faltas registradas</h3><p class="muted">O histórico mostra cada vez que um caminhão não veio e o que aconteceu depois.</p></section>`;
+  else body = `<section class="card falta-hist">${hist.map(({ nk, k, e }) => {
+    const st = e.status === 'naoveio' ? (k === nk ? ['wait', 'Ainda sem reagendar'] : ['wait', `Faltou de novo ${fmtShort(fromKey(k))}`])
+      : e.status === 'cancelado' ? ['off', 'Cancelado']
+      : e.status === 'veio' ? ['ok', `Veio ${fmtShort(fromKey(k))}${e.t?.veio ? ' às ' + fmtTime(e.t.veio) : ''}`]
+      : ['next', `Reagendado: ${fmtShort(fromKey(k))} · ${truckHour(e)}`];
+    return `<div class="fh-row"><span class="fh-date"><b>${fmtDM(fromKey(nk))}</b><small>${WD[fromKey(nk).getDay()]}</small></span>
+      <span class="fh-mat">${mono(e)}<span><b>${esc(matName(e))}</b><small>${[e.op && `Lote ${e.op}`, e.os && `Ordem ${e.os}`].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}</small></span></span>
+      <button type="button" class="fh-st ${st[0]}" data-goto-truck="${e.id}" data-day="${k}">${esc(st[1])}</button></div>`;
+  }).join('')}</section>`;
+  box.innerHTML = `
+    <div class="falta-kpis">
+      ${kpi(I.x, pend.length, pend.length === 1 ? 'aguardando reagendar' : 'aguardando reagendar', pend.length ? 'bad' : '')}
+      ${kpi(I.calClock, mes, 'faltas neste mês')}
+      ${kpi(I.check, reag, 'reagendados / vieram depois', 'ok')}
+      ${kpi(I.truck, top ? esc(top[0]) : '—', top ? `mais faltou (${top[1]}×)` : 'material que mais falta', 'wide')}
+    </div>
+    <div class="seg falta-seg" role="tablist">
+      <button type="button" data-faltas-view="pend" class="${faltasView === 'pend' ? 'active' : ''}">${I.x}Para reagendar${pend.length ? ` <span class="pill">${pend.length}</span>` : ''}</button>
+      <button type="button" data-faltas-view="hist" class="${faltasView === 'hist' ? 'active' : ''}">${I.chart}Histórico de faltas</button>
+    </div>
+    <div class="falta-list">${body}</div>`;
+}
+document.addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-faltas-view]');
+  if (b) { faltasView = b.dataset.faltasView; renderFaltas(); }
+});
 
 /* ================= Animações de cada ação no caminhão =================
    Cada etapa tem a sua: OP carimba, MSC2N vira o calendário, Rótulos sai
@@ -4373,7 +4740,7 @@ document.addEventListener('keydown', (ev) => {
   }
   if (typing || ev.ctrlKey || ev.metaKey || ev.altKey || openDlg) return;
   const key = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
-  const go = { 1: 'hoje', 2: 'agenda', 3: 'preparo', 4: 'percurso', 5: 'historico', 6: 'materiais' }[key];
+  const go = { 1: 'hoje', 2: 'agenda', 3: 'preparo', 4: 'percurso', 5: 'historico', 6: 'materiais', 7: 'faltas' }[key];
   if (go) { ev.preventDefault(); setTab(go); return; }
   const act = {
     n: () => { if (!['agenda', 'preparo'].includes(currentTab)) setTab('agenda'); openEnv(currentTab === 'preparo' ? prDay : agDay); },
@@ -4397,6 +4764,7 @@ document.addEventListener('keydown', (ev) => {
     b: () => openSearch(),
     p: () => openReport(),
     x: () => openXls(currentTab === 'agenda' ? 'day' : 'week'),
+    m: () => openMail(),
     l: () => (SEC.vault ? secLock() : toast('Ative a proteção em Configurações → Segurança')),
   }[key];
   if (act) { ev.preventDefault(); act(); }

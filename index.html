@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=25">
+  <link rel="stylesheet" href="style.css?v=26">
   <script>
     // aplica tema e preferências antes de desenhar (evita "piscar")
     (function () {
@@ -94,6 +94,7 @@
     <nav class="tabs" aria-label="Seções">
       <button class="tab-btn" data-tab="hoje"><span data-ic="scroll"></span>Hoje</button>
       <button class="tab-btn" data-tab="agenda"><span data-ic="clock"></span>Agenda</button>
+      <button class="tab-btn tab-faltas" data-tab="faltas"><span data-ic="x"></span>Não vieram</button>
       <button class="tab-btn" data-tab="preparo"><span data-ic="clipboard"></span>Preparo</button>
       <button class="tab-btn" data-tab="percurso"><span data-ic="route"></span>Percurso</button>
       <button class="tab-btn" data-tab="historico"><span data-ic="chart"></span>Histórico</button>
@@ -189,6 +190,7 @@
           <p class="muted">Operação: segunda 07:15 → sábado 07:15 · 3 turnos · até 7 janelas</p>
         </div>
         <div class="top-btns hide-mobile">
+          <button class="btn btn-ghost" data-mail-open title="Importar carregamentos do e-mail (M)"><span data-ic="mail"></span>Importar e-mail</button>
           <button class="btn btn-ghost" data-new-imp><span data-ic="alarm"></span>Horário imprevisto</button>
           <button class="btn btn-primary" data-new-truck><span data-ic="plus"></span>Novo caminhão</button>
         </div>
@@ -201,6 +203,7 @@
           <button data-ag-view="full"><span data-ic="clipboard"></span>Detalhada</button>
         </div>
         <button type="button" class="btn btn-ghost btn-sm min-all" id="minAllBtn" data-min-all hidden><span data-ic="layers"></span><span>Minimizar todos</span></button>
+        <button type="button" class="btn btn-ghost btn-sm mail-btn" data-mail-open><span data-ic="mail"></span><span>E-mail</span></button>
         <div class="ag-legend">
           <span><i class="lg st-programado"></i>Aguardando</span>
           <span><i class="lg st-veio"></i>Veio</span>
@@ -254,6 +257,19 @@
       <div id="prepBody"></div>
     </section>
 
+    <!-- ================= NÃO VIERAM ================= -->
+    <section class="view" id="view-faltas" hidden>
+      <div class="page-top">
+        <div>
+          <span class="eyebrow">Caminhões que faltaram</span>
+          <h1 class="title">Não vieram</h1>
+          <p class="muted">Só os carros marcados como “Não veio”, para reagendar com calma. Eles continuam aparecendo na agenda também.</p>
+        </div>
+        <button class="btn btn-ghost" data-go-tab="agenda"><span data-ic="clock"></span>Ir para a agenda</button>
+      </div>
+      <div id="faltasOut"></div>
+    </section>
+
     <!-- ================= PERCURSO ================= -->
     <section class="view" id="view-percurso" hidden>
       <div class="page-top">
@@ -262,6 +278,7 @@
           <h1 class="title">Percurso</h1>
           <p class="muted">Informe a saída do caminhão e veja a chegada e todas as janelas possíveis depois dela</p>
         </div>
+        <button class="btn btn-ghost" data-mail-open><span data-ic="mail"></span>Importar do e-mail</button>
       </div>
       <div class="grid-perc">
         <section class="card" id="pcCalc"></section>
@@ -319,6 +336,10 @@
     <button class="tab-btn" data-tab="agenda">
       <span data-ic="clock"></span>
       <span>Agenda</span>
+    </button>
+    <button class="tab-btn tab-faltas" data-tab="faltas">
+      <span data-ic="x"></span>
+      <span>Não veio</span>
     </button>
     <button class="tab-btn" data-tab="preparo">
       <span data-ic="clipboard"></span>
@@ -486,8 +507,8 @@
         <strong><span data-ic="palette"></span>Tema</strong>
         <div class="theme-grid">
           <span class="theme-group-title">Da casa 🐾</span>
-          <button data-theme-set="siames" class="theme-opt"><i style="--a:#1a120d;--b:#a9cdee;--c2:#7a4a24;--p:var(--pat-siames)"></i>Aurora (siamesa)</button>
-          <button data-theme-set="siamesclaro" class="theme-opt"><i style="--a:#fffaf3;--b:#3b74b3;--c2:#e3c6a3;--p:var(--pat-siames-l)"></i>Aurora clara</button>
+          <button data-theme-set="siamesclaro" class="theme-opt"><i style="--a:linear-gradient(160deg,#fffaf2,#f1e2cd);--b:#7fb6ea;--c2:#c99a6e;--p:var(--pat-aurora-c)"></i>Aurora (creme)</button>
+          <button data-theme-set="siames" class="theme-opt"><i style="--a:#201913;--b:#a9d4f7;--c2:#e6c9a2;--p:var(--pat-aurora-n)"></i>Aurora (noite)</button>
           <span class="theme-group-title">Escuros</span>
           <button data-theme-set="dark" class="theme-opt"><i style="--a:#120c1a;--b:#d8b45c;--c2:#3a1f63;--p:var(--pat-royal)"></i>Noite Real</button>
           <button data-theme-set="crimson" class="theme-opt"><i style="--a:#170a0e;--b:#d8b45c;--c2:#6c1129;--p:var(--pat-crimson)"></i>Carmesim Imperial</button>
@@ -598,6 +619,17 @@
     </div>
   </dialog>
 
+  <dialog id="mailDlg" class="sheet mail-sheet">
+    <div class="sheet-head">
+      <div>
+        <span class="eyebrow">Carregamentos do fornecedor</span>
+        <h2>Importar e-mail</h2>
+      </div>
+      <button type="button" class="icon-btn" data-close aria-label="Fechar"><span data-ic="x"></span></button>
+    </div>
+    <div class="adj" id="mailBody"></div>
+  </dialog>
+
   <dialog id="xlsDlg" class="sheet">
     <div class="sheet-head">
       <div>
@@ -677,6 +709,7 @@
       <div class="keys-col">
         <h4>Navegar</h4>
         <p><kbd>1</kbd><kbd>…</kbd><kbd>6</kbd><span>Hoje · Agenda · Preparo · Percurso · Histórico · Materiais</span></p>
+        <p><kbd>7</kbd><span>Não vieram</span></p>
         <p><kbd>←</kbd><kbd>→</kbd><span>Dia anterior / próximo (Agenda e Preparo)</span></p>
         <p><kbd>H</kbd><span>Voltar para o dia de hoje</span></p>
         <h4>Sequência</h4>
@@ -698,6 +731,7 @@
         <p><kbd>L</kbd><span>Bloquear o painel</span></p>
         <p><kbd>P</kbd><span>Relatório do dia</span></p>
         <p><kbd>X</kbd><span>Exportar para Excel</span></p>
+        <p><kbd>M</kbd><span>Importar carregamentos do e-mail</span></p>
         <p><kbd>Ctrl</kbd><kbd>Enter</kbd><span>Salvar a janela aberta</span></p>
         <p><kbd>Esc</kbd><span>Fechar a janela</span></p>
         <p><kbd>?</kbd><span>Mostrar estes atalhos</span></p>
@@ -707,6 +741,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=25"></script>
+  <script src="app.js?v=26"></script>
 </body>
 </html>
